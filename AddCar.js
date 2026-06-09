@@ -35,6 +35,7 @@ import {
 } from "./src/api/carDataset";
 
 const screenWidth = Dimensions.get("window").width;
+const allowedPlateLetters = ["B", "G", "Z", "S", "N", "A", "Y"];
 
 // ─── Reusable dropdown picker field ──────────────────────────────────────────
 function DropdownField({
@@ -267,6 +268,30 @@ export default function AddCar({ navigation }) {
     }
   }
 
+  function handlePlateChange(text) {
+    let cleaned = text.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+    if (cleaned.length === 0) {
+      setPlateNumber("");
+      return;
+    }
+
+    const firstLetter = cleaned.charAt(0);
+
+    if (!allowedPlateLetters.includes(firstLetter)) {
+      Alert.alert(
+        "Invalid plate letter",
+        "Plate number must start with B, G, Z, S, N, A, or Y."
+      );
+      setPlateNumber("");
+      return;
+    }
+
+    const numbers = cleaned.slice(1).replace(/[^0-9]/g, "").slice(0, 7);
+
+    setPlateNumber(firstLetter + numbers);
+  }
+
   async function handleAddCar() {
     Keyboard.dismiss();
 
@@ -288,10 +313,10 @@ export default function AddCar({ navigation }) {
     const vin = vinNumber.trim().toUpperCase();
     const mileage = currentMileage.trim();
 
-    if (plate.length < 3) {
+    if (!/^[BGZSNAY][0-9]{3,7}$/.test(plate)) {
       Alert.alert(
         "Invalid plate number",
-        "Plate number must be at least 3 characters."
+        "Plate number must start with B, G, Z, S, N, A, or Y, followed by 3 to 7 numbers. Example: B3451"
       );
       return;
     }
@@ -319,14 +344,14 @@ export default function AddCar({ navigation }) {
         brand: selectedBrand.label,
         model: selectedModel.label,
         color: selectedColor.label,
-        color_hex: selectedColor.hex,       // ← hex saved for color overlay
+        color_hex: selectedColor.hex,
         year: selectedYear.value,
         plate_number: plate,
         vin,
         engine_type: selectedEngine.label,
         current_mileage: numericMileage,
-        generation_id: generationId,        // ← links to correct generation
-        image_path: imagePath,              // ← correct car image for this year
+        generation_id: generationId,
+        image_path: imagePath,
       };
 
       console.log("Sending vehicle data:", vehicleData);
@@ -347,7 +372,10 @@ export default function AddCar({ navigation }) {
   if (!loadFont) return null;
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    <TouchableWithoutFeedback
+      onPress={() => Keyboard.dismiss()}
+      accessible={false}
+    >
       <KeyboardAvoidingView
         style={styles.mainScreen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -410,7 +438,7 @@ export default function AddCar({ navigation }) {
               loading={loadingVariant}
             />
 
-            {/* Free-text fields — unchanged */}
+            {/* Free-text fields */}
             <View style={styles.inputBox}>
               <MaterialCommunityIcons
                 name="dots-grid"
@@ -420,11 +448,12 @@ export default function AddCar({ navigation }) {
               />
               <TextInput
                 style={styles.textinput}
-                placeholder="Plate Number"
+                placeholder="Plate Number ex: B3451"
                 placeholderTextColor="#cfd2db"
                 value={plateNumber}
                 autoCapitalize="characters"
-                onChangeText={(t) => setPlateNumber(t.toUpperCase())}
+                maxLength={8}
+                onChangeText={handlePlateChange}
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
               />
@@ -542,6 +571,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     height: 42,
     paddingLeft: 20,
+    paddingRight: 15,
   },
   inputBoxDisabled: { backgroundColor: "#f9f9f9", borderColor: "#ebebeb" },
   icon: { marginRight: 15 },

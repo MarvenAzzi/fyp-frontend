@@ -12,6 +12,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   InputAccessoryView,
+  ScrollView,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -25,10 +26,10 @@ import { useState } from "react";
 
 import { sendForgotPasswordCode } from "./src/api/forgotPassword";
 
-const phoneInputAccessoryViewID = "phoneInputAccessoryView";
+const emailInputAccessoryViewID = "emailInputAccessoryView";
 
-export default function PhoneNumberForForgetPassword({ navigation }) {
-  const [phoneNumber, setPhoneNumber] = useState("");
+export default function EmailForForgetPassword({ navigation }) {
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const [loadFonts] = useFonts({
@@ -36,43 +37,43 @@ export default function PhoneNumberForForgetPassword({ navigation }) {
     Inter_500Medium,
   });
 
-  function handlePhoneChange(text) {
-    const onlyDigits = text.replace(/[^0-9]/g, "");
-    setPhoneNumber(onlyDigits.slice(0, 8));
+  function handleEmailChange(text) {
+    setEmail(text);
+  }
+
+  function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   }
 
   async function handleSendCode() {
     Keyboard.dismiss();
 
-    if (!phoneNumber) {
-      Alert.alert("Missing phone number", "Please enter your phone number.");
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      Alert.alert("Missing email", "Please enter your email address.");
       return;
     }
 
-    if (phoneNumber.length !== 8) {
-      Alert.alert(
-        "Invalid phone number",
-        "Please enter your 8 digit phone number without +961."
-      );
+    if (!isValidEmail(cleanEmail)) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
       return;
     }
 
     try {
       setLoading(true);
 
-      const data = await sendForgotPasswordCode(phoneNumber);
-
-      console.log("Development OTP response:", data);
+      await sendForgotPasswordCode(cleanEmail);
 
       Alert.alert(
-        "Development Verification Code",
-        `Your verification code is: ${data.dev_code}`,
+        "Code sent",
+        "A verification code has been sent to your email.",
         [
           {
             text: "OK",
             onPress: () =>
               navigation.navigate("OtpForForgetPassword", {
-                phoneNumber,
+                email: cleanEmail,
               }),
           },
         ]
@@ -93,66 +94,69 @@ export default function PhoneNumberForForgetPassword({ navigation }) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <KeyboardAvoidingView
         style={styles.mainScreen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <TouchableOpacity
-          style={styles.verificationcodebutton}
-          onPress={() => {
-            Keyboard.dismiss();
-            navigation.goBack();
-          }}
-        >
-          <View style={styles.backContent}>
-            <Ionicons name="arrow-back-outline" size={25} color="black" />
-            <Text style={styles.verificationcodetext}>Forgot Password</Text>
-          </View>
-        </TouchableOpacity>
-
-        <Image source={forgetPass} style={styles.verificationcodeimg} />
-
-        <Text style={styles.text}>
-          Please enter your phone number to receive verification code
-        </Text>
-
-        <Text style={styles.labeltext}>Phone Number</Text>
-
-        <TextInput
-          style={styles.textinput}
-          value={phoneNumber}
-          onChangeText={handlePhoneChange}
-          keyboardType="number-pad"
-          placeholder="81840688"
-          placeholderTextColor="#c5c8d3"
-          maxLength={8}
-          returnKeyType="done"
-          blurOnSubmit={true}
-          onSubmitEditing={Keyboard.dismiss}
-          inputAccessoryViewID={
-            Platform.OS === "ios" ? phoneInputAccessoryViewID : undefined
-          }
-        />
-
-        {Platform.OS === "ios" && (
-          <InputAccessoryView nativeID={phoneInputAccessoryViewID}>
-            <View style={styles.keyboardToolbar}>
-              <TouchableOpacity onPress={Keyboard.dismiss}>
-                <Text style={styles.doneText}>Done</Text>
-              </TouchableOpacity>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <TouchableOpacity
+            style={styles.verificationcodebutton}
+            onPress={() => {
+              Keyboard.dismiss();
+              navigation.goBack();
+            }}
+          >
+            <View style={styles.backContent}>
+              <Ionicons name="arrow-back-outline" size={25} color="black" />
+              <Text style={styles.verificationcodetext}>Forgot Password</Text>
             </View>
-          </InputAccessoryView>
-        )}
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.sendcodebutton, loading && styles.buttonDisabled]}
-          onPress={handleSendCode}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.buttontext}>Send Code</Text>
+          <Image source={forgetPass} style={styles.verificationcodeimg} />
+
+          <Text style={styles.text}>
+            Please enter your email address to receive verification code
+          </Text>
+
+          <Text style={styles.labeltext}>Email Address</Text>
+
+          <TextInput
+            style={styles.textinput}
+            value={email}
+            onChangeText={handleEmailChange}
+            keyboardType="email-address"
+            placeholder="Enter your email"
+            placeholderTextColor="#c5c8d3"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+            blurOnSubmit={true}
+            onSubmitEditing={Keyboard.dismiss}
+            inputAccessoryViewID={
+              Platform.OS === "ios" ? emailInputAccessoryViewID : undefined
+            }
+          />
+
+          {Platform.OS === "ios" && (
+            <InputAccessoryView nativeID={emailInputAccessoryViewID}>
+              <View style={styles.keyboardToolbar}>
+                <TouchableOpacity onPress={Keyboard.dismiss}>
+                  <Text style={styles.doneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </InputAccessoryView>
           )}
-        </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.sendcodebutton, loading && styles.buttonDisabled]}
+            onPress={handleSendCode}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttontext}>Send Code</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
@@ -205,20 +209,20 @@ const styles = StyleSheet.create({
   },
 
   labeltext: {
-    marginLeft: 50,
+    marginLeft: 55,
     color: "#8A8F93",
-    top: 68,
-    right: -10,
+    marginTop: 45,
+    marginBottom: 8,
   },
 
   textinput: {
     borderColor: "#DCDDE1",
     borderWidth: 2,
     marginLeft: 45,
-    marginTop: 40,
+    marginTop: 0,
     width: 300,
     borderRadius: 10,
-    height: 75,
+    height: 65,
     paddingLeft: 20,
     fontSize: 18,
   },

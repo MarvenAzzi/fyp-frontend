@@ -4,7 +4,7 @@ import { Image, StyleSheet } from 'react-native';
 import Home from './Home';
 import Signup from './Signup';
 import Signin from './Signin';
-import PhoneNumberForForgetPassword from './PhoneNumberForForgetPassword';
+import EmailForForgetPassword from './EmailForForgetPassword';
 import OtpForForgetPassword from './OtpForForgetPassword';
 import ResetPassword from './ResetPassword';
 import Getstarted from './Getstarted';
@@ -13,7 +13,10 @@ import Profile from './Profile';
 import AccountInformation from './AccountInformation';
 import EditProfile from './EditProfile';
 import MyCars from './MyCars';
-import CarInfo from './CarInfo';   // ← NEW
+import CarInfo from './CarInfo';
+import CarInformation from './CarInformation';
+import Diagnose from './Diagnose';
+import GarageMap from './GarageMap';
 import { useEffect } from 'react';
 import { useFonts, Outfit_700Bold } from "@expo-google-fonts/outfit";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -43,20 +46,23 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName='logoscreen'>
-        <Stack.Screen name='logoscreen'                    component={SplashScreen}                    options={{ headerShown: false }} />
-        <Stack.Screen name='Signup'                        component={Signup}                          options={{ headerShown: false }} />
-        <Stack.Screen name='Signin'                        component={Signin}                          options={{ headerShown: false }} />
-        <Stack.Screen name='PhoneNumberForForgetPassword'  component={PhoneNumberForForgetPassword}    options={{ headerShown: false }} />
-        <Stack.Screen name='OtpForForgetPassword'          component={OtpForForgetPassword}            options={{ headerShown: false }} />
-        <Stack.Screen name='ResetPassword'                 component={ResetPassword}                   options={{ headerShown: false }} />
-        <Stack.Screen name='Home'                          component={Home}                            options={{ headerShown: false }} />
-        <Stack.Screen name='Getstarted'                    component={Getstarted}                      options={{ headerShown: false }} />
-        <Stack.Screen name='AddCar'                        component={AddCar}                          options={{ headerShown: false }} />
-        <Stack.Screen name='Profile'                       component={Profile}                         options={{ headerShown: false }} />
-        <Stack.Screen name='AccountInformation'            component={AccountInformation}              options={{ headerShown: false }} />
-        <Stack.Screen name='EditProfile'                   component={EditProfile}                     options={{ headerShown: false }} />
-        <Stack.Screen name='MyCars'                        component={MyCars}                          options={{ headerShown: false }} />
-        <Stack.Screen name='CarInfo'                       component={CarInfo}                         options={{ headerShown: false }} />
+        <Stack.Screen name='logoscreen'          component={SplashScreen}          options={{ headerShown: false }} />
+        <Stack.Screen name='Signup'              component={Signup}                options={{ headerShown: false }} />
+        <Stack.Screen name='Signin'              component={Signin}                options={{ headerShown: false }} />
+        <Stack.Screen name='EmailForForgetPassword' component={EmailForForgetPassword} options={{ headerShown: false }} />
+        <Stack.Screen name='OtpForForgetPassword' component={OtpForForgetPassword} options={{ headerShown: false }} />
+        <Stack.Screen name='ResetPassword'       component={ResetPassword}         options={{ headerShown: false }} />
+        <Stack.Screen name='Home'                component={Home}                  options={{ headerShown: false }} />
+        <Stack.Screen name='Getstarted'          component={Getstarted}            options={{ headerShown: false }} />
+        <Stack.Screen name='AddCar'              component={AddCar}                options={{ headerShown: false }} />
+        <Stack.Screen name='Profile'             component={Profile}               options={{ headerShown: false }} />
+        <Stack.Screen name='AccountInformation'  component={AccountInformation}    options={{ headerShown: false }} />
+        <Stack.Screen name='EditProfile'         component={EditProfile}           options={{ headerShown: false }} />
+        <Stack.Screen name='MyCars'              component={MyCars}                options={{ headerShown: false }} />
+        <Stack.Screen name='CarInfo'             component={CarInfo}               options={{ headerShown: false }} />
+        <Stack.Screen name='CarInformation'      component={CarInformation}        options={{ headerShown: false }} />
+        <Stack.Screen name='Diagnose'            component={Diagnose}              options={{ headerShown: false }} />
+        <Stack.Screen name='GarageMap'           component={GarageMap}             options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

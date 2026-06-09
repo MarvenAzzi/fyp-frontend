@@ -12,10 +12,11 @@ import {
   Alert,
   ActivityIndicator,
   InputAccessoryView,
+  ScrollView,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 import verificationcode from "./assets/verification code.png";
 
@@ -24,17 +25,40 @@ import { verifyForgotPasswordCode } from "./src/api/forgotPassword";
 const otpInputAccessoryViewID = "otpInputAccessoryView";
 
 export default function OtpForForgetPassword({ navigation, route }) {
-  const phoneNumber = route?.params?.phoneNumber || "";
+  const email = route?.params?.email || "";
 
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleCodeChange(text) {
-    const onlyDigits = text.replace(/[^0-9]/g, "").slice(0, 4);
-    setCode(onlyDigits);
+  const inputRefs = useRef([]);
 
-    if (onlyDigits.length === 4) {
+  function handleSingleCodeChange(text, index) {
+    const digit = text.replace(/[^0-9]/g, "");
+
+    if (!digit) {
+      const newCode = code.slice(0, index) + code.slice(index + 1);
+      setCode(newCode);
+      return;
+    }
+
+    const newCodeArray = code.split("");
+    newCodeArray[index] = digit[digit.length - 1];
+
+    const newCode = newCodeArray.join("").slice(0, 4);
+    setCode(newCode);
+
+    if (index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    } else {
       Keyboard.dismiss();
+    }
+  }
+
+  function handleKeyPress(event, index) {
+    if (event.nativeEvent.key === "Backspace") {
+      if (!code[index] && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
     }
   }
 
@@ -46,17 +70,23 @@ export default function OtpForForgetPassword({ navigation, route }) {
       return;
     }
 
+    if (!email) {
+      Alert.alert("Missing email", "Please request a code again.");
+      navigation.navigate("EmailForForgetPassword");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const data = await verifyForgotPasswordCode(phoneNumber, code);
+      const data = await verifyForgotPasswordCode(email, code);
 
       console.log("Verified code:", data);
 
       Alert.alert("Success", "Code verified successfully.");
 
       navigation.navigate("ResetPassword", {
-        phoneNumber,
+        email,
         code,
       });
     } catch (error) {
@@ -71,80 +101,73 @@ export default function OtpForForgetPassword({ navigation, route }) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <KeyboardAvoidingView
         style={styles.mainScreen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => {
-            Keyboard.dismiss();
-            navigation.goBack();
-          }}
-        >
-          <Ionicons name="arrow-back-outline" size={22} color="#333" />
-          <Text style={styles.backText}>Verification Code</Text>
-        </TouchableOpacity>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              Keyboard.dismiss();
+              navigation.goBack();
+            }}
+          >
+            <Ionicons name="arrow-back-outline" size={22} color="#333" />
+            <Text style={styles.backText}>Verification Code</Text>
+          </TouchableOpacity>
 
-        <Image source={verificationcode} style={styles.verificationImage} />
+          <Image source={verificationcode} style={styles.verificationImage} />
 
-        <Text style={styles.infoText}>
-          Please enter the 4 digit code{"\n"}for:{" "}
-          <Text style={styles.phoneText}>{phoneNumber}</Text>
-        </Text>
+          <Text style={styles.infoText}>
+            Please enter the 4 digit code{"\n"}sent to:{" "}
+            <Text style={styles.emailText}>{email}</Text>
+          </Text>
 
-        <View style={styles.codeContainer}>
-          {[0, 1, 2, 3].map((index) => (
-            <TextInput
-              key={index}
-              style={styles.codeInput}
-              value={code[index] || ""}
-              editable={index === code.length}
-              keyboardType="number-pad"
-              maxLength={1}
-              textAlign="center"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onChangeText={(text) => {
-                const newCode =
-                  code.slice(0, index) +
-                  text.replace(/[^0-9]/g, "") +
-                  code.slice(index + 1);
-
-                handleCodeChange(newCode);
-              }}
-              onFocus={() => {
-                if (index > code.length) {
-                  Keyboard.dismiss();
+          <View style={styles.codeContainer}>
+            {[0, 1, 2, 3].map((index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => {
+                  inputRefs.current[index] = ref;
+                }}
+                style={styles.codeInput}
+                value={code[index] || ""}
+                keyboardType="number-pad"
+                maxLength={1}
+                textAlign="center"
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onChangeText={(text) => handleSingleCodeChange(text, index)}
+                onKeyPress={(event) => handleKeyPress(event, index)}
+                onSubmitEditing={Keyboard.dismiss}
+                inputAccessoryViewID={
+                  Platform.OS === "ios" ? otpInputAccessoryViewID : undefined
                 }
-              }}
-              onSubmitEditing={Keyboard.dismiss}
-              inputAccessoryViewID={
-                Platform.OS === "ios" ? otpInputAccessoryViewID : undefined
-              }
-            />
-          ))}
-        </View>
+              />
+            ))}
+          </View>
 
-        {Platform.OS === "ios" && (
-          <InputAccessoryView nativeID={otpInputAccessoryViewID}>
-            <View style={styles.keyboardToolbar}>
-              <TouchableOpacity onPress={Keyboard.dismiss}>
-                <Text style={styles.doneText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          </InputAccessoryView>
-        )}
-
-        <TouchableOpacity
-          style={[styles.verifyButton, loading && styles.buttonDisabled]}
-          onPress={handleVerifyCode}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.verifyButtonText}>Verify Code</Text>
+          {Platform.OS === "ios" && (
+            <InputAccessoryView nativeID={otpInputAccessoryViewID}>
+              <View style={styles.keyboardToolbar}>
+                <TouchableOpacity onPress={Keyboard.dismiss}>
+                  <Text style={styles.doneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </InputAccessoryView>
           )}
-        </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.verifyButton, loading && styles.buttonDisabled]}
+            onPress={handleVerifyCode}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.verifyButtonText}>Verify Code</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
@@ -191,10 +214,12 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     color: "#8A8F93",
     fontWeight: "700",
+    paddingHorizontal: 20,
   },
 
-  phoneText: {
+  emailText: {
     color: "#2D7EEB",
+    fontSize: 16,
   },
 
   codeContainer: {

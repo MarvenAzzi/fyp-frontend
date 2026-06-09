@@ -7,9 +7,12 @@ import {
   ScrollView,
   Image,
   Dimensions,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 
 import { useState, useEffect } from "react";
@@ -17,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Asset } from "expo-asset";
 import Logo from "./assets/logo1.png";
 
+import { isStrongPassword, getPasswordErrorMessage } from "./src/api/auth";
 import { register } from "./src/api/auth";
 
 const screenWidth = Dimensions.get("window").width;
@@ -30,6 +34,9 @@ export default function Signup({ navigation }) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -61,6 +68,11 @@ export default function Signup({ navigation }) {
       return;
     }
 
+    if (!isStrongPassword(password)) {
+      Alert.alert("Weak password", getPasswordErrorMessage());
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert("Password error", "Passwords do not match.");
       return;
@@ -74,7 +86,7 @@ export default function Signup({ navigation }) {
     try {
       setLoading(true);
 
-      const data = await register(username, email, phoneNumber, password);
+      const data = await register(username, phoneNumber, email, password);
 
       console.log("Registered user:", data.user);
 
@@ -93,144 +105,185 @@ export default function Signup({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.mainScreen}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.page}>
-          <View style={styles.topBox}>
-            <Image source={Logo} style={styles.logo} resizeMode="stretch" />
-          </View>
+    <View style={styles.mainScreen}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <KeyboardAvoidingView
+          style={styles.mainScreen}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.page}>
+              <View style={styles.topBox}>
+                <Image source={Logo} style={styles.logo} resizeMode="stretch" />
+              </View>
 
-          <Text style={styles.bigText}>Welcome To VAGDIAG</Text>
+              <Text style={styles.bigText}>Welcome To VAGDIAG</Text>
 
-          <Text style={styles.smallTitle}>Create Account</Text>
+              <Text style={styles.smallTitle}>Create Account</Text>
 
-          <View style={styles.formBox}>
-            <View style={styles.inputBox}>
-              <Ionicons
-                name="person"
-                size={18}
-                color="#b8c7ff"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                placeholderTextColor="#c5c8d3"
-                value={username}
-                onChangeText={setUsername}
-              />
+              <View style={styles.formBox}>
+                <View style={styles.inputBox}>
+                  <Ionicons
+                    name="person"
+                    size={18}
+                    color="#b8c7ff"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Username"
+                    placeholderTextColor="#c5c8d3"
+                    value={username}
+                    onChangeText={setUsername}
+                  />
+                </View>
+
+                <View style={styles.inputBox}>
+                  <Ionicons
+                    name="mail"
+                    size={18}
+                    color="#b8c7ff"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor="#c5c8d3"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <View style={styles.inputBox}>
+                  <Ionicons
+                    name="call"
+                    size={18}
+                    color="#b8c7ff"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Phone Number"
+                    placeholderTextColor="#c5c8d3"
+                    keyboardType="number-pad"
+                    value={phoneNumber}
+                    onChangeText={handlePhoneChange}
+                    maxLength={8}
+                  />
+                </View>
+
+                <View style={styles.inputBox}>
+                  <Ionicons
+                    name="lock-closed"
+                    size={18}
+                    color="#b8c7ff"
+                    style={styles.inputIcon}
+                  />
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#c5c8d3"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye" : "eye-off"}
+                      size={18}
+                      color="#b8c7ff"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.inputBox}>
+                  <Ionicons
+                    name="lock-closed"
+                    size={18}
+                    color="#b8c7ff"
+                    style={styles.inputIcon}
+                  />
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm Password"
+                    placeholderTextColor="#c5c8d3"
+                    secureTextEntry={!showConfirmPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                  />
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setShowConfirmPassword(!showConfirmPassword)
+                    }
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? "eye" : "eye-off"}
+                      size={18}
+                      color="#b8c7ff"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.termsBox}>
+                  <TouchableOpacity
+                    style={[styles.checkBox, checked && styles.checkBoxActive]}
+                    onPress={() => setChecked(!checked)}
+                    activeOpacity={0.8}
+                  >
+                    {checked && (
+                      <Ionicons name="checkmark" size={13} color="white" />
+                    )}
+                  </TouchableOpacity>
+
+                  <Text style={styles.termsText}>
+                    I agree to the{" "}
+                    <Text style={styles.blueText}>Terms and Conditions.</Text>
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.button, loading && styles.buttonDisabled]}
+                  onPress={handleSignup}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={styles.buttonText}>SIGN UP</Text>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.loginBox}>
+                  <Text style={styles.loginText}>
+                    Already have an account?{" "}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("Signin")}
+                  >
+                    <Text style={styles.blueText}>Sign In</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-
-            <View style={styles.inputBox}>
-              <Ionicons
-                name="mail"
-                size={18}
-                color="#b8c7ff"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                placeholderTextColor="#c5c8d3"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={styles.inputBox}>
-              <Ionicons
-                name="call"
-                size={18}
-                color="#b8c7ff"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Phone Number e.g. 81840688"
-                placeholderTextColor="#c5c8d3"
-                keyboardType="number-pad"
-                value={phoneNumber}
-                onChangeText={handlePhoneChange}
-                maxLength={8}
-              />
-            </View>
-
-            <View style={styles.inputBox}>
-              <Ionicons
-                name="lock-closed"
-                size={18}
-                color="#b8c7ff"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#c5c8d3"
-                secureTextEntry={true}
-                value={password}
-                onChangeText={setPassword}
-              />
-            </View>
-
-            <View style={styles.inputBox}>
-              <Ionicons
-                name="lock-closed"
-                size={18}
-                color="#b8c7ff"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor="#c5c8d3"
-                secureTextEntry={true}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-            </View>
-
-            <View style={styles.termsBox}>
-              <TouchableOpacity
-                style={[styles.checkBox, checked && styles.checkBoxActive]}
-                onPress={() => setChecked(!checked)}
-                activeOpacity={0.8}
-              >
-                {checked && (
-                  <Ionicons name="checkmark" size={13} color="white" />
-                )}
-              </TouchableOpacity>
-
-              <Text style={styles.termsText}>
-                I agree to the{" "}
-                <Text style={styles.blueText}>Terms and Conditions.</Text>
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleSignup}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.buttonText}>SIGN UP</Text>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.loginBox}>
-              <Text style={styles.loginText}>Already have an account? </Text>
-
-              <TouchableOpacity onPress={() => navigation.navigate("Signin")}>
-                <Text style={styles.blueText}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
+    </View>
   );
 }
 

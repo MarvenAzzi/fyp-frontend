@@ -9,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
   StatusBar,
+  Alert
 } from "react-native";
 
 import { Ionicons, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
@@ -68,14 +69,51 @@ export default function Home({ navigation }) {
 
   function getSelectedCarName() {
     if (!selectedVehicle) {
-      return "No car selected";
+      return null;
     }
 
     return `${selectedVehicle.brand} ${selectedVehicle.model}`;
   }
 
-  if (!imagesReady) {
-    return <View style={styles.mainScreen} />;
+  async function handleDiagnosePress() {
+    try {
+      const vehicle = await getSelectedVehicle();
+
+      if (!vehicle) {
+        Alert.alert(
+          "No car connected",
+          "Please connect a car to diagnose."
+        );
+        return;
+      }
+
+      navigation.navigate("Diagnose");
+    } catch (error) {
+      console.log("Diagnose open error:", error);
+
+      Alert.alert(
+        "No car connected",
+        "Please connect a car to diagnose."
+      );
+    }
+  }
+
+  async function handleOpenHistory() {
+    try {
+      const vehicle = await getSelectedVehicle();
+
+      if (!vehicle) {
+        Alert.alert("No car selected", "Please select a car first.");
+        return;
+      }
+
+      navigation.navigate("CarInformation", {
+        vehicle,
+      });
+    } catch (error) {
+      console.log("Open history error:", error);
+      Alert.alert("No car found", "Could not open car information.");
+    }
   }
 
   return (
@@ -117,7 +155,7 @@ export default function Home({ navigation }) {
 
               <TouchableOpacity
                 style={styles.diagnoseButton}
-                onPress={() => navigation.navigate("Diagnose")}
+                onPress={handleDiagnosePress}
               >
                 <Text style={styles.diagnoseButtonText}>Diagnose</Text>
               </TouchableOpacity>
@@ -143,7 +181,7 @@ export default function Home({ navigation }) {
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.historyCard}>
+              <TouchableOpacity style={styles.historyCard} onPress={handleOpenHistory}>
                 <View style={styles.historyTop}>
                   <View style={styles.iconBox}>
                     <MaterialIcons name="history" size={17} color="#8faeff" />
@@ -167,7 +205,7 @@ export default function Home({ navigation }) {
                 Find your closest{"\n"}garage station
               </Text>
 
-              <TouchableOpacity style={styles.directionButton}>
+              <TouchableOpacity style={styles.directionButton} onPress={() => navigation.navigate("GarageMap")}>
                 <Text style={styles.directionButtonText}>Get Directions</Text>
               </TouchableOpacity>
             </View>
@@ -185,7 +223,7 @@ export default function Home({ navigation }) {
 
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate("Diagnose")}
+          onPress={handleDiagnosePress}
         >
           <MaterialIcons name="manage-search" size={22} color="black" />
           <Text style={styles.navText}>Diagnose</Text>
@@ -258,7 +296,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: "#2d7eff",
-    marginTop: 8,
+    marginTop: 15,
   },
 
   notificationButton: {

@@ -25,15 +25,20 @@ import {
 import { useState } from "react";
 
 import { resetForgotPassword } from "./src/api/forgotPassword";
+import { isStrongPassword, getPasswordErrorMessage } from "./src/api/auth";
 
 const passwordInputAccessoryViewID = "passwordInputAccessoryView";
 
 export default function ResetPassword({ navigation, route }) {
-  const phoneNumber = route?.params?.phoneNumber || "";
+  const email = route?.params?.email || "";
   const code = route?.params?.code || "";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   const [loadFonts] = useFonts({
@@ -49,8 +54,8 @@ export default function ResetPassword({ navigation, route }) {
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert("Invalid password", "Password must be at least 6 characters.");
+    if (!isStrongPassword(password)) {
+      Alert.alert("Weak password", getPasswordErrorMessage());
       return;
     }
 
@@ -59,19 +64,19 @@ export default function ResetPassword({ navigation, route }) {
       return;
     }
 
-    if (!phoneNumber || !code) {
+    if (!email || !code) {
       Alert.alert(
         "Reset error",
         "Missing verification data. Please verify your code again."
       );
-      navigation.navigate("PhoneNumberForForgetPassword");
+      navigation.navigate("EmailForForgetPassword");
       return;
     }
 
     try {
       setLoading(true);
 
-      const data = await resetForgotPassword(phoneNumber, code, password);
+      const data = await resetForgotPassword(email, code, password);
 
       console.log("Password reset:", data);
 
@@ -101,7 +106,7 @@ export default function ResetPassword({ navigation, route }) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <KeyboardAvoidingView
         style={styles.mainScreen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView keyboardShouldPersistTaps="handled">
           <View style={styles.container}>
@@ -120,41 +125,69 @@ export default function ResetPassword({ navigation, route }) {
 
             <Image source={resetPassword} style={styles.resetpassimg} />
 
-            <Text style={styles.text}>
-              Please enter your new password
-            </Text>
+            <Text style={styles.text}>Please enter your new password</Text>
 
             <Text style={styles.labeltext}>Password</Text>
-            <TextInput
-              style={styles.textinput}
-              secureTextEntry={true}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="New Password"
-              placeholderTextColor="#c5c8d3"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={Keyboard.dismiss}
-              inputAccessoryViewID={
-                Platform.OS === "ios" ? passwordInputAccessoryViewID : undefined
-              }
-            />
+            <View style={styles.passwordBox}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="New Password"
+                placeholderTextColor="#c5c8d3"
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+                inputAccessoryViewID={
+                  Platform.OS === "ios"
+                    ? passwordInputAccessoryViewID
+                    : undefined
+                }
+              />
+
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={showPassword ? "eye" : "eye-off"}
+                  size={22}
+                  color="#8A8F93"
+                />
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.labeltext}>Confirm Password</Text>
-            <TextInput
-              style={styles.textinput}
-              secureTextEntry={true}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Confirm New Password"
-              placeholderTextColor="#c5c8d3"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={Keyboard.dismiss}
-              inputAccessoryViewID={
-                Platform.OS === "ios" ? passwordInputAccessoryViewID : undefined
-              }
-            />
+            <View style={styles.passwordBox}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm New Password"
+                placeholderTextColor="#c5c8d3"
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+                inputAccessoryViewID={
+                  Platform.OS === "ios"
+                    ? passwordInputAccessoryViewID
+                    : undefined
+                }
+              />
+
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? "eye" : "eye-off"}
+                  size={22}
+                  color="#8A8F93"
+                />
+              </TouchableOpacity>
+            </View>
 
             {Platform.OS === "ios" && (
               <InputAccessoryView nativeID={passwordInputAccessoryViewID}>
@@ -250,6 +283,26 @@ const styles = StyleSheet.create({
     height: 60,
     paddingLeft: 20,
     marginBottom: 18,
+    fontSize: 16,
+  },
+
+  passwordBox: {
+    borderColor: "#DCDDE1",
+    borderWidth: 2,
+    marginLeft: 45,
+    width: 300,
+    borderRadius: 10,
+    height: 60,
+    paddingLeft: 20,
+    paddingRight: 15,
+    marginBottom: 18,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  passwordInput: {
+    flex: 1,
+    height: "100%",
     fontSize: 16,
   },
 

@@ -1,7 +1,7 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-export async function sendForgotPasswordCode(phoneNumber) {
-  const cleanPhoneNumber = phoneNumber.replace(/[^0-9]/g, "").slice(0, 8);
+export async function sendForgotPasswordCode(email) {
+  const cleanEmail = email.trim().toLowerCase();
 
   const response = await fetch(`${API_URL}/forgot-password/send-code`, {
     method: "POST",
@@ -10,7 +10,7 @@ export async function sendForgotPasswordCode(phoneNumber) {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      phone_number: cleanPhoneNumber,
+      email: cleanEmail,
     }),
   });
 
@@ -24,14 +24,14 @@ export async function sendForgotPasswordCode(phoneNumber) {
       throw new Error(firstError);
     }
 
-    throw new Error(data.message || "Failed to create verification code.");
+    throw new Error(data.message || "Failed to send verification code.");
   }
 
   return data;
 }
 
-export async function verifyForgotPasswordCode(phoneNumber, code) {
-  const cleanPhoneNumber = phoneNumber.replace(/[^0-9]/g, "").slice(0, 8);
+export async function verifyForgotPasswordCode(email, code) {
+  const cleanEmail = email.trim().toLowerCase();
 
   const response = await fetch(`${API_URL}/forgot-password/verify-code`, {
     method: "POST",
@@ -40,7 +40,7 @@ export async function verifyForgotPasswordCode(phoneNumber, code) {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      phone_number: cleanPhoneNumber,
+      email: cleanEmail,
       code,
     }),
   });
@@ -61,8 +61,8 @@ export async function verifyForgotPasswordCode(phoneNumber, code) {
   return data;
 }
 
-export async function resetForgotPassword(phoneNumber, code, password) {
-  const cleanPhoneNumber = phoneNumber.replace(/[^0-9]/g, "").slice(0, 8);
+export async function resetForgotPassword(email, code, password) {
+  const cleanEmail = email.trim().toLowerCase();
 
   const response = await fetch(`${API_URL}/forgot-password/reset-password`, {
     method: "POST",
@@ -71,7 +71,7 @@ export async function resetForgotPassword(phoneNumber, code, password) {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      phone_number: cleanPhoneNumber,
+      email: cleanEmail,
       code,
       password,
     }),

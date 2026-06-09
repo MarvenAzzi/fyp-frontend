@@ -9,6 +9,10 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 
 import {
@@ -34,6 +38,8 @@ export default function Signin({ navigation }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const [showPassword, setShowPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   const [loadFont] = useFonts({
@@ -58,7 +64,6 @@ export default function Signin({ navigation }) {
 
       Alert.alert("Success", "Signed in successfully.");
       navigation.replace("Home");
-      
     } catch (error) {
       console.log("Signin error:", error);
       Alert.alert("Signin failed", error.message);
@@ -72,89 +77,112 @@ export default function Signin({ navigation }) {
   }
 
   return (
-    <ScrollView>
-      <View style={styles.topBox}>
-        <Image source={Logo} style={styles.logoImage} resizeMode="stretch" />
-      </View>
-
-      <Text
-        style={{
-          fontFamily: "Outfit_400Regular",
-          fontSize: 32,
-          textAlign: "center",
-          padding: 60,
-        }}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <KeyboardAvoidingView
+        style={styles.mainScreen}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        Sign In Now
-      </Text>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <View style={styles.topBox}>
+            <Image source={Logo} style={styles.logoImage} resizeMode="stretch" />
+          </View>
 
-      <View style={styles.inputBox}>
-        <Ionicons name="person" color={"#B0BFF8"} size={25} />
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-        />
-      </View>
-
-      <View style={styles.inputBox}>
-        <Ionicons name="lock-closed" color={"#B0BFF8"} size={25} />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-      </View>
-
-      <View style={{ flexDirection: "row", marginLeft: 25, paddingTop: 15 }}>
-        <CheckBox value={isChecked} onValueChange={setChecked} />
-
-        <Text style={{ marginLeft: 10 }}>Remember Me</Text>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("PhoneNumberForForgetPassword")}
-        >
-          <Text style={{ color: "#0051FF", marginLeft: 100 }}>
-            Forgot Password?
+          <Text
+            style={{
+              fontFamily: "Outfit_400Regular",
+              fontSize: 32,
+              textAlign: "center",
+              padding: 60,
+            }}
+          >
+            Sign In Now
           </Text>
-        </TouchableOpacity>
-      </View>
 
-      <TouchableOpacity
-        style={[styles.signupbutton, loading && styles.buttonDisabled]}
-        onPress={handleSignin}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <Text style={styles.buttontext}>SIGN IN</Text>
-        )}
-      </TouchableOpacity>
+          <View style={styles.inputBox}>
+            <Ionicons name="person" color={"#B0BFF8"} size={25} />
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+            />
+          </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "center",
-          alignItems: "center",
-          paddingTop: 20,
-        }}
-      >
-        <Text>Don't you have an account?</Text>
+          <View style={styles.inputBox}>
+            <Ionicons name="lock-closed" color={"#B0BFF8"} size={25} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
 
-        <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-          <Text style={{ color: "#0051FF", marginLeft: 5 }}>Sign Up</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={showPassword ? "eye" : "eye-off"}
+                size={22}
+                color="#B0BFF8"
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ flexDirection: "row", marginLeft: 25, paddingTop: 15 }}>
+            <CheckBox value={isChecked} onValueChange={setChecked} />
+
+            <Text style={{ marginLeft: 10 }}>Remember Me</Text>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate("EmailForForgetPassword")}
+            >
+              <Text style={{ color: "#0051FF", marginLeft: 100 }}>
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.signupbutton, loading && styles.buttonDisabled]}
+            onPress={handleSignin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttontext}>SIGN IN</Text>
+            )}
+          </TouchableOpacity>
+
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+              paddingTop: 20,
+            }}
+          >
+            <Text>Don't you have an account?</Text>
+
+            <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
+              <Text style={{ color: "#0051FF", marginLeft: 5 }}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
+  mainScreen: {
+    flex: 1,
+    backgroundColor: "white",
+  },
+
   topBox: {
     width: screenWidth,
     height: 185,

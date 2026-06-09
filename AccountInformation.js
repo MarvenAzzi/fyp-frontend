@@ -68,12 +68,6 @@ export default function AccountInformation({ navigation }) {
           <Text style={styles.value}>{email || "Not available"}</Text>
           <View style={styles.line} />
         </View>
-
-        <View style={styles.infoBlock}>
-          <Text style={styles.label}>Password</Text>
-          <Text style={styles.value}>{password || "Not available"}</Text>
-          <View style={styles.line} />
-        </View>
       </View>
     </View>
   );

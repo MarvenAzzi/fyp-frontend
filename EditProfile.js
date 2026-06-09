@@ -12,20 +12,30 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
   InputAccessoryView,
+  ScrollView,
+  Pressable,
 } from "react-native";
 
 import { Ionicons, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
-import { getAuthUser, updateProfile } from "./src/api/auth";
+import {
+  getAuthUser,
+  updateProfile,
+  isStrongPassword,
+  getPasswordErrorMessage,
+} from "./src/api/auth";
 
 const screenWidth = Dimensions.get("window").width;
 const phoneInputAccessoryViewID = "phoneInputAccessoryView";
 
+const PASSWORD_MASK = "••••••••";
+
 export default function EditProfile({ navigation }) {
   const [usernameInput, setUsernameInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
-  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState(PASSWORD_MASK);
+
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [pageReady, setPageReady] = useState(false);
@@ -38,7 +48,7 @@ export default function EditProfile({ navigation }) {
         if (user) {
           setUsernameInput(user.username || "");
           setPhoneInput(user.phone_number || "");
-          setPasswordInput(user.plain_password || "");
+          setPasswordInput(PASSWORD_MASK);
         }
       } catch (error) {
         console.log("Edit profile load error:", error);
@@ -55,15 +65,47 @@ export default function EditProfile({ navigation }) {
     setPhoneInput(onlyDigits.slice(0, 8));
   }
 
+  function handlePasswordFocus() {
+    if (passwordInput === PASSWORD_MASK) {
+      setPasswordInput("");
+      setShowPassword(false);
+    }
+  }
+
+  function handlePasswordBlur() {
+    if (passwordInput.trim() === "") {
+      setPasswordInput(PASSWORD_MASK);
+      setShowPassword(false);
+    }
+  }
+
+  function handleEyePress() {
+    if (passwordInput === PASSWORD_MASK) {
+      Alert.alert(
+        "Password hidden",
+        "For security, your old password cannot be shown. Type a new password first, then press the eye to show or hide it."
+      );
+      return;
+    }
+
+    setShowPassword(!showPassword);
+  }
+
   async function handleSave() {
     Keyboard.dismiss();
 
-    if (!usernameInput || !phoneInput) {
+    const username = usernameInput.trim();
+    const phone = phoneInput.trim();
+    const password = passwordInput.trim();
+
+    const passwordChanged = password !== PASSWORD_MASK && password.length > 0;
+
+    if (!username || !phone) {
       Alert.alert("Missing fields", "Username and phone number are required.");
       return;
     }
 
-    if (phoneInput.length !== 8) {
+    if (phone.length !== 8) {
       Alert.alert(
         "Invalid phone number",
         "Please enter your 8 digit phone number without +961."
@@ -71,17 +113,24 @@ export default function EditProfile({ navigation }) {
       return;
     }
 
-    if (passwordInput && passwordInput.length < 6) {
-      Alert.alert("Invalid password", "Password must be at least 6 characters.");
+    if (passwordChanged && !isStrongPassword(password)) {
+      Alert.alert("Weak password", getPasswordErrorMessage());
       return;
     }
 
     try {
       setLoading(true);
 
-      const data = await updateProfile(usernameInput, phoneInput, passwordInput);
+      const data = await updateProfile(
+        username,
+        phone,
+        passwordChanged ? password : ""
+      );
 
       console.log("Updated user:", data.user);
+
+      setPasswordInput(PASSWORD_MASK);
+      setShowPassword(false);
 
       Alert.alert("Success", "Profile updated successfully.", [
         {
@@ -102,104 +151,134 @@ export default function EditProfile({ navigation }) {
   }
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    <View style={styles.mainScreen}>
+      <StatusBar barStyle="dark-content" backgroundColor="#dce4ff" />
+
       <KeyboardAvoidingView
         style={styles.mainScreen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <StatusBar barStyle="dark-content" backgroundColor="#dce4ff" />
+        <ScrollView
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                Keyboard.dismiss();
+                navigation.goBack();
+              }}
+            >
+              <Ionicons name="arrow-back" size={20} color="#4d4d4d" />
+              <Text style={styles.backText}>Edit Profile</Text>
+            </TouchableOpacity>
 
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              Keyboard.dismiss();
-              navigation.goBack();
-            }}
-          >
-            <Ionicons name="arrow-back" size={20} color="#4d4d4d" />
-            <Text style={styles.backText}>Edit Profile</Text>
-          </TouchableOpacity>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarLetter}>
+                {usernameInput ? usernameInput.charAt(0).toUpperCase() : "U"}
+              </Text>
+            </View>
 
-          <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>
-              {usernameInput ? usernameInput.charAt(0).toUpperCase() : "U"}
-            </Text>
+            <Text style={styles.usernameTitle}>{usernameInput || "User"}</Text>
           </View>
 
-          <Text style={styles.usernameTitle}>{usernameInput || "User"}</Text>
-        </View>
+          <View style={styles.form}>
+            <View style={styles.inputBox}>
+              <Ionicons name="person" size={22} color="#b7c3ff" />
 
-        <View style={styles.form}>
-          <View style={styles.inputBox}>
-            <Ionicons name="person" size={22} color="#b7c3ff" />
-            <TextInput
-              style={styles.input}
-              placeholder="Username"
-              placeholderTextColor="#cfd2db"
-              value={usernameInput}
-              onChangeText={setUsernameInput}
-              autoCapitalize="none"
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
-          </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                placeholderTextColor="#cfd2db"
+                value={usernameInput}
+                onChangeText={setUsernameInput}
+                autoCapitalize="none"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
 
-          <View style={styles.inputBox}>
-            <Ionicons name="call" size={22} color="#b7c3ff" />
-            <TextInput
-              style={styles.input}
-              placeholder="Phone Number"
-              placeholderTextColor="#cfd2db"
-              value={phoneInput}
-              onChangeText={handlePhoneChange}
-              keyboardType="number-pad"
-              maxLength={8}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={Keyboard.dismiss}
-              inputAccessoryViewID={
-                Platform.OS === "ios" ? phoneInputAccessoryViewID : undefined
-              }
-            />
-          </View>
+            <View style={styles.inputBox}>
+              <Ionicons name="call" size={22} color="#b7c3ff" />
 
-          <View style={styles.inputBox}>
-            <Ionicons name="lock-closed" size={22} color="#b7c3ff" />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#cfd2db"
-              value={passwordInput}
-              onChangeText={setPasswordInput}
-              secureTextEntry={false}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
-          </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Phone Number"
+                placeholderTextColor="#cfd2db"
+                value={phoneInput}
+                onChangeText={handlePhoneChange}
+                keyboardType="number-pad"
+                maxLength={8}
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+                inputAccessoryViewID={
+                  Platform.OS === "ios" ? phoneInputAccessoryViewID : undefined
+                }
+              />
+            </View>
 
-          {Platform.OS === "ios" && (
-            <InputAccessoryView nativeID={phoneInputAccessoryViewID}>
-              <View style={styles.keyboardToolbar}>
-                <TouchableOpacity onPress={Keyboard.dismiss}>
-                  <Text style={styles.doneText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </InputAccessoryView>
-          )}
+            <View style={styles.inputBox}>
+              <Ionicons name="lock-closed" size={22} color="#b7c3ff" />
 
-          <TouchableOpacity
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.saveButtonText}>Save</Text>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Password"
+                placeholderTextColor="#cfd2db"
+                value={passwordInput}
+                onChangeText={setPasswordInput}
+                onFocus={handlePasswordFocus}
+                onBlur={handlePasswordBlur}
+                secureTextEntry={
+                  passwordInput !== PASSWORD_MASK && !showPassword
+                }
+                autoCapitalize="none"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                inputAccessoryViewID={
+                  Platform.OS === "ios" ? phoneInputAccessoryViewID : undefined
+                }
+              />
+
+              <Pressable
+                style={styles.eyeButton}
+                onPress={handleEyePress}
+                hitSlop={20}
+              >
+                <Ionicons
+                  name={showPassword ? "eye" : "eye-off"}
+                  size={22}
+                  color="#b7c3ff"
+                />
+              </Pressable>
+            </View>
+
+            {Platform.OS === "ios" && (
+              <InputAccessoryView nativeID={phoneInputAccessoryViewID}>
+                <View style={styles.keyboardToolbar}>
+                  <TouchableOpacity onPress={Keyboard.dismiss}>
+                    <Text style={styles.doneText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </InputAccessoryView>
             )}
-          </TouchableOpacity>
-        </View>
+
+            <TouchableOpacity
+              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
 
         <View style={styles.bottomNav}>
           <TouchableOpacity
@@ -235,7 +314,7 @@ export default function EditProfile({ navigation }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+    </View>
   );
 }
 
@@ -243,6 +322,10 @@ const styles = StyleSheet.create({
   mainScreen: {
     flex: 1,
     backgroundColor: "white",
+  },
+
+  scrollContent: {
+    paddingBottom: 130,
   },
 
   header: {
@@ -324,6 +407,26 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 15,
     color: "#222222",
+  },
+
+  passwordInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 15,
+    color: "#222222",
+    paddingRight: 55,
+  },
+
+  eyeButton: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    width: 55,
+    height: 53,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+    elevation: 999,
   },
 
   saveButton: {
