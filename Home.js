@@ -21,6 +21,8 @@ import HeaderBg from "./assets/homeheader.png";
 
 import { getAuthUser } from "./src/api/auth";
 import { getSelectedVehicle } from "./src/api/vehicles";
+import { getLatestScan } from "./src/api/diagnostics";
+import { calculateReminders, getBadgeCount } from "./src/utils/serviceReminders";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -28,6 +30,20 @@ export default function Home({ navigation }) {
   const [imagesReady, setImagesReady] = useState(false);
   const [username, setUsername] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [lastScan, setLastScan] = useState(null);
+  const [notifBadge, setNotifBadge] = useState(0);
+
+  function formatLastScanned(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (diffDays === 0) return `Today, ${time}`;
+    if (diffDays === 1) return `Yesterday, ${time}`;
+    return `${d.toLocaleDateString()}, ${time}`;
+  }
 
   async function loadHomeData() {
     try {
@@ -41,6 +57,20 @@ export default function Home({ navigation }) {
       }
 
       setSelectedVehicle(vehicle);
+
+      if (vehicle) {
+        try {
+          const data = await getLatestScan(vehicle.id);
+          setLastScan(data.scan ?? null);
+        } catch (_) {
+          setLastScan(null);
+        }
+        const reminders = calculateReminders(vehicle.current_mileage, vehicle.engine_type, vehicle.id);
+        setNotifBadge(getBadgeCount(reminders));
+      } else {
+        setLastScan(null);
+        setNotifBadge(0);
+      }
     } catch (error) {
       console.log("Home load error:", error);
     }
@@ -129,18 +159,38 @@ export default function Home({ navigation }) {
           >
             <View style={styles.headerContent}>
               <View style={styles.headerTextBox}>
-                <Text style={styles.greeting}>Good Morning,</Text>
-
-                <Text style={styles.name}>{username || "User"}</Text>
-
-                <Text style={styles.selectedCarText}>
-                  {getSelectedCarName()}
-                </Text>
+                {selectedVehicle ? (
+                  <>
+                    <Text style={styles.greeting}>Welcome back,</Text>
+                    <Text style={styles.name}>{username || "User"}</Text>
+                    <View style={styles.carPill}>
+                      <FontAwesome5 name="car" size={10} color="#2d7eff" />
+                      <Text style={styles.selectedCarText} numberOfLines={1}>
+                        {getSelectedCarName()}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.greeting}>Welcome to</Text>
+                    <Text style={styles.nameBlue}>VAGDIAG</Text>
+                    <Text style={styles.newUserHint}>Add a car to get started</Text>
+                  </>
+                )}
               </View>
 
-              <TouchableOpacity style={styles.notificationButton}>
-                <Ionicons name="notifications" size={22} color="#6ea0ff" />
-                <View style={styles.redDot} />
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => navigation.navigate("Notifications", { vehicle: selectedVehicle })}
+              >
+                <Ionicons name="notifications-outline" size={22} color="#6ea0ff" />
+                {notifBadge > 0 && (
+                  <View style={styles.redBadge}>
+                    <Text style={styles.redBadgeText}>
+                      {notifBadge > 9 ? "9+" : notifBadge}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
           </ImageBackground>
@@ -149,7 +199,10 @@ export default function Home({ navigation }) {
         <View style={styles.content}>
           <View style={styles.topCards}>
             <View style={styles.diagnoseCard}>
-              <Image source={CarImage} style={styles.carImage} />
+              <Image
+                source={selectedVehicle?.image_url ? { uri: selectedVehicle.image_url } : CarImage}
+                style={styles.carImage}
+              />
 
               <Text style={styles.diagnoseTitle}>Start Diagnosis Now!!</Text>
 
@@ -162,29 +215,57 @@ export default function Home({ navigation }) {
             </View>
 
             <View style={styles.rightCards}>
-              <View style={styles.statusCard}>
+              <View style={[
+                styles.statusCard,
+                lastScan && (lastScan.overall_status === "faulty"
+                  ? { borderLeftWidth: 3, borderLeftColor: "#ef4444" }
+                  : { borderLeftWidth: 3, borderLeftColor: "#22c55e" })
+              ]}>
                 <View style={styles.statusTop}>
                   <View style={styles.iconBox}>
                     <FontAwesome5 name="car" size={14} color="#8faeff" />
                   </View>
-
                   <View>
                     <Text style={styles.cardTitle}>Car Status</Text>
                     <Text style={styles.cardSubtitle}>Engine Status</Text>
                   </View>
                 </View>
 
-                <View style={styles.statusBottom}>
-                  <View style={styles.noneBadge}>
-                    <Text style={styles.noneText}>NONE</Text>
+                {lastScan ? (
+                  <View style={[
+                    styles.statusBadge,
+                    lastScan.overall_status === "faulty"
+                      ? styles.statusBadgeFaulty
+                      : styles.statusBadgeHealthy,
+                  ]}>
+                    <Ionicons
+                      name={lastScan.overall_status === "faulty" ? "close-circle" : "checkmark-circle"}
+                      size={20}
+                      color={lastScan.overall_status === "faulty" ? "#ef4444" : "#22c55e"}
+                    />
+                    <View>
+                      <Text style={[
+                        styles.statusBadgeText,
+                        { color: lastScan.overall_status === "faulty" ? "#ef4444" : "#16a34a" }
+                      ]}>
+                        {lastScan.overall_status === "faulty" ? "Faulty" : "Healthy"}
+                      </Text>
+                      <Text style={styles.lastScannedText}>
+                        {formatLastScanned(lastScan.scanned_at)}
+                      </Text>
+                    </View>
                   </View>
-                </View>
+                ) : (
+                  <View style={styles.statusBottom}>
+                    <Text style={styles.noScanText}>No scan yet</Text>
+                  </View>
+                )}
               </View>
 
               <TouchableOpacity style={styles.historyCard} onPress={handleOpenHistory}>
                 <View style={styles.historyTop}>
                   <View style={styles.iconBox}>
-                    <MaterialIcons name="history" size={17} color="#8faeff" />
+                    <MaterialIcons name="receipt-long" size={17} color="#8faeff" />
                   </View>
 
                   <Ionicons name="chevron-forward" size={22} color="#111" />
@@ -280,23 +361,51 @@ const styles = StyleSheet.create({
   },
 
   greeting: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "black",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6b7280",
+    letterSpacing: 0.3,
   },
 
   name: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: "800",
-    color: "black",
+    color: "#111",
     marginTop: 2,
   },
 
-  selectedCarText: {
-    fontSize: 14,
-    fontWeight: "800",
+  nameBlue: {
+    fontSize: 28,
+    fontWeight: "900",
     color: "#2d7eff",
-    marginTop: 15,
+    marginTop: 2,
+    letterSpacing: -0.5,
+  },
+
+  carPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 8,
+    backgroundColor: "rgba(45,126,255,0.10)",
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+
+  selectedCarText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#2d7eff",
+    maxWidth: 120,
+  },
+
+  newUserHint: {
+    fontSize: 11,
+    color: "#9ca3af",
+    fontWeight: "500",
+    marginTop: 8,
   },
 
   notificationButton: {
@@ -313,14 +422,22 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
-  redDot: {
+  redBadge: {
     position: "absolute",
-    top: 10,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: "#ff3b30",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  redBadgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "700",
   },
 
   content: {
@@ -335,7 +452,7 @@ const styles = StyleSheet.create({
   },
 
   diagnoseCard: {
-    width: "52%",
+    width: "54%",
     height: 285,
     backgroundColor: "white",
     borderRadius: 12,
@@ -380,7 +497,7 @@ const styles = StyleSheet.create({
   },
 
   rightCards: {
-    width: "38%",
+    width: "43%",
   },
 
   statusCard: {
@@ -429,17 +546,34 @@ const styles = StyleSheet.create({
     marginTop: 25,
   },
 
-  noneBadge: {
-    backgroundColor: "#f1f2f6",
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 5,
+  noScanText: {
+    fontSize: 11,
+    color: "#b4b4b4",
+    fontWeight: "500",
+    fontStyle: "italic",
   },
 
-  noneText: {
-    color: "#7a7d86",
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  statusBadgeHealthy: { backgroundColor: "#f0fdf4" },
+  statusBadgeFaulty:  { backgroundColor: "#fff1f1" },
+
+  statusBadgeText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  lastScannedText: {
     fontSize: 9,
-    fontWeight: "800",
+    color: "#9ca3af",
+    marginTop: 2,
   },
 
   historyCard: {
@@ -529,7 +663,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     width: "100%",
-    height: 58,
+    height: 75,
     backgroundColor: "white",
     borderTopWidth: 1,
     borderTopColor: "#e5e5e5",

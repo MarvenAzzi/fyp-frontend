@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { Ionicons, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { getAuthUser, logout } from "./src/api/auth";
 
 const screenWidth = Dimensions.get("window").width;
@@ -21,24 +22,17 @@ export default function Profile({ navigation }) {
     async function loadUser() {
       try {
         const user = await getAuthUser();
-
-        if (user && user.username) {
-          setUsername(user.username);
-        }
+        if (user && user.username) setUsername(user.username);
       } catch (error) {
         console.log("Profile load user error:", error);
       }
     }
-
     loadUser();
   }, []);
 
   function handleSignOut() {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
+      { text: "Cancel", style: "cancel" },
       {
         text: "Sign Out",
         style: "destructive",
@@ -47,7 +41,6 @@ export default function Profile({ navigation }) {
             await logout();
             navigation.replace("Signin");
           } catch (error) {
-            console.log("Logout error:", error);
             Alert.alert("Error", "Could not sign out. Please try again.");
           }
         },
@@ -57,92 +50,65 @@ export default function Profile({ navigation }) {
 
   return (
     <View style={styles.mainScreen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#dce4ff" />
+      <StatusBar barStyle="dark-content" backgroundColor="#c0caf5" />
 
-      <View style={styles.header}>
-        <View style={styles.avatarWrapper}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>
-              {username ? username.charAt(0).toUpperCase() : "U"}
-            </Text>
+      {/* ── Curved gradient header ── */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={["#b0bde8", "#c8d3f5", "#dce5ff"]}
+          style={styles.header}
+        >
+          <View style={styles.avatarWrapper}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarLetter}>
+                {username ? username.charAt(0).toUpperCase() : "U"}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate("EditProfile")}
+            >
+              <Ionicons name="pencil" size={13} color="white" />
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => navigation.navigate("EditProfile")}
-          >
-            <Ionicons name="pencil" size={15} color="#8fa7ff" />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.username}>{username || "User"}</Text>
+          <Text style={styles.username}>{username || "User"}</Text>
+        </LinearGradient>
       </View>
 
+      {/* ── Menu items ── */}
       <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.menuItem}
+        <MenuItem
+          icon={<Ionicons name="person-outline" size={22} color="#8fa7ff" />}
+          label="Account Information"
           onPress={() => navigation.navigate("AccountInformation")}
-        >
-          <View style={styles.menuLeft}>
-            <View style={styles.menuIconBox}>
-              <Ionicons name="person" size={23} color="#9aadff" />
-            </View>
-
-            <Text style={styles.menuText}>Account Information</Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={24} color="#d2d2d2" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.menuItem}
+        />
+        <MenuItem
+          icon={<Ionicons name="car-sport-outline" size={22} color="#8fa7ff" />}
+          label="My Cars"
           onPress={() => navigation.navigate("MyCars")}
-        >
-          <View style={styles.menuLeft}>
-            <View style={styles.menuIconBox}>
-              <Ionicons name="car-sport-outline" size={24} color="#9aadff" />
-            </View>
-
-            <Text style={styles.menuText}>My Cars</Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={24} color="#d2d2d2" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
-          <View style={styles.menuLeft}>
-            <View style={styles.menuIconBox}>
-              <Ionicons name="log-out-outline" size={25} color="#9aadff" />
-            </View>
-
-            <Text style={styles.menuText}>Sign Out</Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={24} color="#d2d2d2" />
-        </TouchableOpacity>
+        />
+        <MenuItem
+          icon={<Ionicons name="log-out-outline" size={22} color="#8fa7ff" />}
+          label="Sign Out"
+          onPress={handleSignOut}
+        />
       </View>
 
+      {/* ── Bottom nav ── */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate("Home")}
-        >
-          <Ionicons name="home" size={22} color="black" />
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("Home")}>
+          <Ionicons name="home-outline" size={22} color="black" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate("Diagnose")}
-        >
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("Diagnose")}>
           <MaterialIcons name="manage-search" size={23} color="black" />
           <Text style={styles.navText}>Diagnose</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate("MyCars")}
-        >
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("MyCars")}>
           <FontAwesome5 name="car" size={18} color="black" />
           <Text style={styles.navText}>Cars</Text>
         </TouchableOpacity>
@@ -156,108 +122,118 @@ export default function Profile({ navigation }) {
   );
 }
 
+function MenuItem({ icon, label, onPress }) {
+  return (
+    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.menuLeft}>
+        <View style={styles.menuIconBox}>{icon}</View>
+        <Text style={styles.menuText}>{label}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#c0c0c0" />
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   mainScreen: {
     flex: 1,
     backgroundColor: "white",
   },
 
-  header: {
-    width: screenWidth,
-    height: 250,
-    backgroundColor: "#dce4ff",
-    borderBottomLeftRadius: 175,
-    borderBottomRightRadius: 175,
-    justifyContent: "center",
+  headerContainer: {
+    width: "100%",
     alignItems: "center",
-    paddingTop: 22,
+    overflow: "hidden",
+    height: 300,
+  },
+  header: {
+    width: screenWidth * 1.6,
+    paddingTop: 60,
+    paddingBottom: 55,
+    borderBottomLeftRadius: screenWidth * 1.0,
+    borderBottomRightRadius: screenWidth * 1.0,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   avatarWrapper: {
     position: "relative",
+    marginBottom: 16,
   },
-
   avatar: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
+    width: 92,
+    height: 92,
+    borderRadius: 46,
     backgroundColor: "#7f9cff",
     justifyContent: "center",
     alignItems: "center",
   },
-
   avatarLetter: {
     color: "white",
-    fontSize: 38,
+    fontSize: 40,
     fontWeight: "800",
   },
-
   editButton: {
     position: "absolute",
-    right: -2,
-    bottom: 5,
-    width: 25,
-    height: 25,
-    borderRadius: 13,
-    backgroundColor: "white",
+    right: 0,
+    bottom: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#8fa7ff",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "white",
   },
 
   username: {
-    marginTop: 24,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "800",
     color: "black",
   },
 
+  // ── Menu ──
   content: {
-    marginTop: 62,
+    marginTop: 48,
     alignItems: "center",
+    gap: 18,
   },
-
   menuItem: {
-    width: screenWidth - 58,
-    height: 48,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: "#dddddd",
-    backgroundColor: "#fffdfd",
+    width: screenWidth - 56,
+    height: 58,
+    borderRadius: 14,
+    backgroundColor: "#f4f5f7",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingRight: 13,
-    marginBottom: 34,
+    paddingHorizontal: 16,
   },
-
   menuLeft: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 14,
   },
-
   menuIconBox: {
-    width: 45,
-    height: 45,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: "#d8def5",
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#eef1ff",
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: -1,
-    marginRight: 14,
   },
-
   menuText: {
     fontSize: 15,
-    color: "#222222",
-    fontWeight: "400",
+    color: "#222",
+    fontWeight: "500",
   },
 
+  // ── Bottom nav ──
   bottomNav: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    height: 62,
+    height: 75,
     backgroundColor: "white",
     borderTopWidth: 1,
     borderTopColor: "#e5e5e5",
@@ -265,19 +241,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "center",
   },
-
   navItem: {
     alignItems: "center",
     justifyContent: "center",
   },
-
   navText: {
     color: "black",
     fontSize: 10,
     marginTop: 4,
     fontWeight: "600",
   },
-
   activeNavText: {
     color: "#006fff",
     fontSize: 10,

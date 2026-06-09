@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Image,
   ImageBackground,
-  TouchableOpacity,
+  Animated,
+  PanResponder,
   Dimensions,
-  ScrollView,
   StatusBar,
 } from "react-native";
 
@@ -19,27 +19,80 @@ import Background from "./assets/getstarted.png";
 
 const screenWidth = Dimensions.get("window").width;
 
+const BTN_W     = screenWidth * 0.8;
+const BTN_H     = 68;
+const THUMB_W   = 62;
+const PAD       = 4;
+const MAX_SLIDE = BTN_W - THUMB_W - PAD * 2;
+const TRIGGER   = MAX_SLIDE * 0.82;
+
 export default function Getstarted({ navigation }) {
   const [imagesReady, setImagesReady] = useState(false);
+  const slideX    = useRef(new Animated.Value(0)).current;
+  const triggered = useRef(false);
+
+  // "Get started" text fades as thumb approaches the right
+  const textOpacity = slideX.interpolate({
+    inputRange: [0, MAX_SLIDE * 0.5, MAX_SLIDE],
+    outputRange: [1, 0.4, 0],
+    extrapolate: "clamp",
+  });
+
+  // Right arrow fades out as thumb approaches it
+  const arrowOpacity = slideX.interpolate({
+    inputRange: [0, MAX_SLIDE * 0.6, MAX_SLIDE],
+    outputRange: [1, 0.3, 0],
+    extrapolate: "clamp",
+  });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder:  () => true,
+      onPanResponderMove: (_, gs) => {
+        slideX.setValue(Math.max(0, Math.min(gs.dx, MAX_SLIDE)));
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (triggered.current) return;
+        const x = Math.max(0, Math.min(gs.dx, MAX_SLIDE));
+        if (x >= TRIGGER) {
+          triggered.current = true;
+          Animated.timing(slideX, {
+            toValue: MAX_SLIDE,
+            duration: 100,
+            useNativeDriver: false,
+          }).start(() => {
+            navigation.navigate("Signup");
+            setTimeout(() => {
+              slideX.setValue(0);
+              triggered.current = false;
+            }, 500);
+          });
+        } else {
+          Animated.spring(slideX, {
+            toValue: 0,
+            friction: 6,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     async function loadImages() {
       await Asset.loadAsync([Logo, Background]);
       setImagesReady(true);
     }
-
     loadImages();
   }, []);
 
-  if (!imagesReady) {
-    return null;
-  }
+  if (!imagesReady) return null;
 
   return (
     <View style={styles.mainScreen}>
       <StatusBar translucent backgroundColor="transparent" />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
         <ImageBackground
           source={Background}
           style={styles.background}
@@ -73,30 +126,33 @@ export default function Getstarted({ navigation }) {
             specifically for Audi and Volkswagen vehicles.
           </Text>
 
-          <TouchableOpacity
-            style={styles.button}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate("Signup")}
-          >
-            <View style={styles.leftCircle}>
+          {/* ── Slider button (same look as before, white circle is draggable) ── */}
+          <View style={styles.button}>
+
+            {/* Draggable white circle — the thumb */}
+            <Animated.View
+              style={[styles.leftCircle, { transform: [{ translateX: slideX }] }]}
+              {...panResponder.panHandlers}
+            >
               <Ionicons name="chevron-forward" size={32} color="#d8d8d8" />
-            </View>
+            </Animated.View>
 
-            <Text style={styles.buttonText}>Get started</Text>
+            {/* Centre label */}
+            <Animated.Text style={[styles.buttonText, { opacity: textOpacity }]}>
+              Slide to get started
+            </Animated.Text>
 
-            <Ionicons
-              name="chevron-forward"
-              size={30}
-              color="white"
-              style={styles.rightArrow}
-            />
-          </TouchableOpacity>
+            {/* Right arrow */}
+            <Animated.View style={[styles.rightArrow, { opacity: arrowOpacity }]}>
+              <Ionicons name="chevron-forward" size={30} color="white" />
+            </Animated.View>
+
+          </View>
 
           <Text style={styles.bottomText}>
             By continuing you agree to our Terms & Privacy Policy
           </Text>
         </ImageBackground>
-      </ScrollView>
     </View>
   );
 }
@@ -108,8 +164,8 @@ const styles = StyleSheet.create({
   },
 
   background: {
+    flex: 1,
     width: screenWidth,
-    height: 960,
   },
 
   logo: {
@@ -195,29 +251,31 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 785,
     left: screenWidth * 0.1,
-    width: screenWidth * 0.8,
-    height: 68,
+    width: BTN_W,
+    height: BTN_H,
     borderRadius: 36,
     backgroundColor: "#006fff",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
 
   leftCircle: {
     position: "absolute",
-    left: 4,
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    left: PAD,
+    width: THUMB_W,
+    height: THUMB_W,
+    borderRadius: THUMB_W / 2,
     backgroundColor: "white",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 2,
   },
 
   buttonText: {
     color: "white",
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "500",
   },
 

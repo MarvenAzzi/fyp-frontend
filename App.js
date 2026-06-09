@@ -17,6 +17,8 @@ import CarInfo from './CarInfo';
 import CarInformation from './CarInformation';
 import Diagnose from './Diagnose';
 import GarageMap from './GarageMap';
+import ErrorLog from './ErrorLog'
+import Notifications from './Notifications';
 import { useEffect } from 'react';
 import { useFonts, Outfit_700Bold } from "@expo-google-fonts/outfit";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,6 +65,8 @@ export default function App() {
         <Stack.Screen name='CarInformation'      component={CarInformation}        options={{ headerShown: false }} />
         <Stack.Screen name='Diagnose'            component={Diagnose}              options={{ headerShown: false }} />
         <Stack.Screen name='GarageMap'           component={GarageMap}             options={{ headerShown: false }} />
+        <Stack.Screen name='ErrorLog'            component={ErrorLog}              options={{ headerShown: false }} />
+        <Stack.Screen name='Notifications'      component={Notifications}         options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

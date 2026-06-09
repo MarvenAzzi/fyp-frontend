@@ -13,6 +13,7 @@ import {
 
 import { Ionicons, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 
 import {
   getVehicles,
@@ -85,7 +86,10 @@ export default function MyCars({ navigation }) {
   }
 
   return (
-    <View style={styles.screen}>
+    <LinearGradient
+      colors={["#b8c3ee", "#d0d7f2", "#e8eaf5"]}
+      style={styles.screen}
+    >
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <Text style={styles.title}>My Cars</Text>
@@ -172,6 +176,7 @@ export default function MyCars({ navigation }) {
       </ScrollView>
 
       {/* Bottom nav */}
+
       <View style={styles.nav}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("Home")}>
           <Ionicons name="home" size={21} color="black" />
@@ -190,19 +195,19 @@ export default function MyCars({ navigation }) {
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#dde5fb" },
+  screen: { flex: 1 },
   content: {
     paddingTop: 55,
     paddingBottom: 100,
     alignItems: "center",   // centers all cards horizontally
   },
-  title: { fontSize: 30, fontWeight: "800", color: "black", alignSelf: "flex-start", marginLeft: 28 },
-  subtitle: { fontSize: 14, color: "#888", marginTop: 6, marginBottom: 28, alignSelf: "flex-start", marginLeft: 28 },
+  title: { fontSize: 34, fontWeight: "800", color: "black", alignSelf: "flex-start", marginLeft: 28 },
+  subtitle: { fontSize: 14, color: "#6b7280", marginTop: 6, marginBottom: 28, alignSelf: "flex-start", marginLeft: 28 },
 
   // ── Card outer: position:relative so delete btn can anchor to it ──
   cardOuter: {
@@ -314,8 +319,8 @@ const styles = StyleSheet.create({
 
   // ── Bottom nav ──
   nav: {
-    position: "absolute", bottom: 0, width: "100%", height: 65,
-    backgroundColor: "white", borderTopWidth: 1, borderTopColor: "#e5e5e5",
+    position: "absolute", bottom: 0, width: "100%", height: 75,
+    backgroundColor: "white", borderTopWidth: 1, borderTopColor: "#e0e0e0",
     flexDirection: "row", justifyContent: "space-around", alignItems: "center",
   },
   navItem: { alignItems: "center", justifyContent: "center" },
