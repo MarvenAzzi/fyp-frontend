@@ -30,6 +30,8 @@ import { addVehicle } from "./src/api/vehicles";
 const screenWidth = Dimensions.get("window").width;
 const carInputAccessoryViewID = "carInputAccessoryView";
 
+const allowedPlateLetters = ["B", "G", "Z", "S", "N", "A", "Y"];
+
 export default function AddCar({ navigation }) {
   const [carBrand, setCarBrand] = useState("");
   const [showBrandList, setShowBrandList] = useState(false);
@@ -58,6 +60,30 @@ export default function AddCar({ navigation }) {
     setCarBrand(brand);
     setShowBrandList(false);
     Keyboard.dismiss();
+  }
+
+  function handlePlateChange(text) {
+    let cleaned = text.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+    if (cleaned.length === 0) {
+      setPlateNumber("");
+      return;
+    }
+
+    const firstLetter = cleaned.charAt(0);
+
+    if (!allowedPlateLetters.includes(firstLetter)) {
+      Alert.alert(
+        "Invalid plate letter",
+        "Plate number must start with B, G, Z, S, N, A, or Y."
+      );
+      setPlateNumber("");
+      return;
+    }
+
+    const numbers = cleaned.slice(1).replace(/[^0-9]/g, "").slice(0, 7);
+
+    setPlateNumber(firstLetter + numbers);
   }
 
   async function handleAddCar() {
@@ -91,7 +117,6 @@ export default function AddCar({ navigation }) {
       return;
     }
 
-    const currentYear = new Date().getFullYear();
     const numericYear = Number(year);
 
     if (!/^\d{4}$/.test(year)) {
@@ -99,18 +124,20 @@ export default function AddCar({ navigation }) {
       return;
     }
 
-    if (numericYear < 1980 || numericYear > currentYear + 1) {
-      Alert.alert(
-        "Invalid year",
-        `Car year must be between 1980 and ${currentYear + 1}.`
-      );
+    if (numericYear > 2026) {
+      Alert.alert("Invalid year", "Car year cannot be greater than 2026.");
       return;
     }
 
-    if (plate.length < 3) {
+    if (numericYear < 1) {
+      Alert.alert("Invalid year", "Please enter a valid car year.");
+      return;
+    }
+
+    if (!/^[BGZSNAY][0-9]{3,7}$/.test(plate)) {
       Alert.alert(
         "Invalid plate number",
-        "Plate number must be at least 3 characters."
+        "Plate number must start with B, G, Z, S, N, A, or Y, followed by 3 to 7 numbers. Example: B3451"
       );
       return;
     }
@@ -330,11 +357,12 @@ export default function AddCar({ navigation }) {
 
               <TextInput
                 style={styles.textinput}
-                placeholder="Plate Number"
+                placeholder="Plate Number ex: B3451"
                 placeholderTextColor="#cfd2db"
                 value={plateNumber}
                 autoCapitalize="characters"
-                onChangeText={(text) => setPlateNumber(text.toUpperCase())}
+                maxLength={8}
+                onChangeText={handlePlateChange}
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
                 inputAccessoryViewID={

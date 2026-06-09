@@ -67,7 +67,6 @@ export default function Home({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
-
   function getSelectedCarName() {
     if (!selectedVehicle) {
       return null;
@@ -76,25 +75,46 @@ export default function Home({ navigation }) {
     return `${selectedVehicle.brand} ${selectedVehicle.model}`;
   }
 
+  async function handleDiagnosePress() {
+    try {
+      const vehicle = await getSelectedVehicle();
 
+      if (!vehicle) {
+        Alert.alert(
+          "No car connected",
+          "Please connect a car to diagnose."
+        );
+        return;
+      }
+
+      navigation.navigate("Diagnose");
+    } catch (error) {
+      console.log("Diagnose open error:", error);
+
+      Alert.alert(
+        "No car connected",
+        "Please connect a car to diagnose."
+      );
+    }
+  }
 
   async function handleOpenHistory() {
-  try {
-    const vehicle = await getSelectedVehicle();
+    try {
+      const vehicle = await getSelectedVehicle();
 
-    if (!vehicle) {
-      Alert.alert("No car selected", "Please select a car first.");
-      return;
+      if (!vehicle) {
+        Alert.alert("No car selected", "Please select a car first.");
+        return;
+      }
+
+      navigation.navigate("CarInformation", {
+        vehicle,
+      });
+    } catch (error) {
+      console.log("Open history error:", error);
+      Alert.alert("No car found", "Could not open car information.");
     }
-
-    navigation.navigate("CarInformation", {
-      vehicle,
-    });
-  } catch (error) {
-    console.log("Open history error:", error);
-    Alert.alert("No car found", "Could not open car information.");
   }
-}
 
   return (
     <View style={styles.mainScreen}>
@@ -135,7 +155,7 @@ export default function Home({ navigation }) {
 
               <TouchableOpacity
                 style={styles.diagnoseButton}
-                onPress={() => navigation.navigate("Diagnose")}
+                onPress={handleDiagnosePress}
               >
                 <Text style={styles.diagnoseButtonText}>Diagnose</Text>
               </TouchableOpacity>
@@ -185,7 +205,7 @@ export default function Home({ navigation }) {
                 Find your closest{"\n"}garage station
               </Text>
 
-              <TouchableOpacity style={styles.directionButton}>
+              <TouchableOpacity style={styles.directionButton} onPress={() => navigation.navigate("GarageMap")}>
                 <Text style={styles.directionButtonText}>Get Directions</Text>
               </TouchableOpacity>
             </View>
@@ -203,7 +223,7 @@ export default function Home({ navigation }) {
 
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate("Diagnose")}
+          onPress={handleDiagnosePress}
         >
           <MaterialIcons name="manage-search" size={22} color="black" />
           <Text style={styles.navText}>Diagnose</Text>
