@@ -19,7 +19,7 @@ import CarImage from "./assets/car-blue.png";
 import MapImage from "./assets/maps.png";
 import HeaderBg from "./assets/homeheader.png";
 
-import { getAuthUser } from "./src/api/auth";
+import { getAuthUser, isNewUser, clearNewUserFlag } from "./src/api/auth";
 import { getSelectedVehicle } from "./src/api/vehicles";
 import { getLatestScan } from "./src/api/diagnostics";
 import { calculateReminders, getBadgeCount } from "./src/utils/serviceReminders";
@@ -32,6 +32,7 @@ export default function Home({ navigation }) {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [lastScan, setLastScan] = useState(null);
   const [notifBadge, setNotifBadge] = useState(0);
+  const [showNewUserGreeting, setShowNewUserGreeting] = useState(false);
 
   function formatLastScanned(dateStr) {
     if (!dateStr) return null;
@@ -54,6 +55,12 @@ export default function Home({ navigation }) {
         setUsername(user.username);
       } else {
         setUsername("");
+      }
+
+      const newUser = await isNewUser();
+      setShowNewUserGreeting(newUser);
+      if (newUser) {
+        await clearNewUserFlag();
       }
 
       setSelectedVehicle(vehicle);
@@ -159,22 +166,26 @@ export default function Home({ navigation }) {
           >
             <View style={styles.headerContent}>
               <View style={styles.headerTextBox}>
-                {selectedVehicle ? (
+                {showNewUserGreeting ? (
                   <>
-                    <Text style={styles.greeting}>Welcome back,</Text>
+                    <Text style={styles.greeting}>Welcome to VagDiag,</Text>
                     <Text style={styles.name}>{username || "User"}</Text>
-                    <View style={styles.carPill}>
-                      <FontAwesome5 name="car" size={10} color="#2d7eff" />
-                      <Text style={styles.selectedCarText} numberOfLines={1}>
-                        {getSelectedCarName()}
-                      </Text>
-                    </View>
+                    <Text style={styles.newUserHint}>Add your car to get started</Text>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.greeting}>Welcome to</Text>
-                    <Text style={styles.nameBlue}>VAGDIAG</Text>
-                    <Text style={styles.newUserHint}>Add a car to get started</Text>
+                    <Text style={styles.greeting}>Welcome back,</Text>
+                    <Text style={styles.name}>{username || "User"}</Text>
+                    {selectedVehicle ? (
+                      <View style={styles.carPill}>
+                        <FontAwesome5 name="car" size={10} color="#2d7eff" />
+                        <Text style={styles.selectedCarText} numberOfLines={1}>
+                          {getSelectedCarName()}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.newUserHint}>Connect your car</Text>
+                    )}
                   </>
                 )}
               </View>
@@ -350,7 +361,7 @@ const styles = StyleSheet.create({
   },
 
   headerContent: {
-    paddingTop: 135,
+    paddingTop: 150,
     paddingHorizontal: 100,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -361,8 +372,8 @@ const styles = StyleSheet.create({
   },
 
   greeting: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
     color: "#6b7280",
     letterSpacing: 0.3,
   },
@@ -372,14 +383,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111",
     marginTop: 2,
-  },
-
-  nameBlue: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: "#2d7eff",
-    marginTop: 2,
-    letterSpacing: -0.5,
   },
 
   carPill: {

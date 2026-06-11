@@ -381,6 +381,22 @@ export default function Diagnose({ navigation }) {
             </Text>
           </View>
         </View>
+
+        {/* AI Assistant entry */}
+        <TouchableOpacity
+          style={styles.aiButton}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate("AiAssistant")}
+        >
+          <View style={styles.aiButtonIcon}>
+            <FontAwesome5 name="robot" size={14} color="white" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.aiButtonTitle}>Ask Quattro</Text>
+            <Text style={styles.aiButtonSubtitle}>Describe a symptom and get instant guidance</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="white" />
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Bottom nav */}
@@ -490,6 +506,21 @@ const styles = StyleSheet.create({
   // ── Last scanned ──
   lastScannedRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 16, gap: 6 },
   lastScannedText: { color: "#9ca3af", fontSize: 12 },
+
+  // ── AI Assistant entry ──
+  aiButton: {
+    width: screenWidth - 16, marginHorizontal: 8, marginTop: 14,
+    backgroundColor: "#2d7eff", borderRadius: 8,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    paddingVertical: 14, paddingHorizontal: 16,
+  },
+  aiButtonIcon: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    justifyContent: "center", alignItems: "center",
+  },
+  aiButtonTitle: { color: "white", fontSize: 14, fontWeight: "800" },
+  aiButtonSubtitle: { color: "rgba(255,255,255,0.85)", fontSize: 11, marginTop: 2 },
 
   // ── Scanning overlay ──
   scanningContainer: { flex: 1, alignItems: "center", paddingTop: 20, paddingHorizontal: 18 },

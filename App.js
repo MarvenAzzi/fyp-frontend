@@ -19,6 +19,7 @@ import Diagnose from './Diagnose';
 import GarageMap from './GarageMap';
 import ErrorLog from './ErrorLog'
 import Notifications from './Notifications';
+import AiAssistant from './AiAssistant';
 import { useEffect } from 'react';
 import { useFonts, Outfit_700Bold } from "@expo-google-fonts/outfit";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -67,6 +68,7 @@ export default function App() {
         <Stack.Screen name='GarageMap'           component={GarageMap}             options={{ headerShown: false }} />
         <Stack.Screen name='ErrorLog'            component={ErrorLog}              options={{ headerShown: false }} />
         <Stack.Screen name='Notifications'      component={Notifications}         options={{ headerShown: false }} />
+        <Stack.Screen name='AiAssistant'        component={AiAssistant}           options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

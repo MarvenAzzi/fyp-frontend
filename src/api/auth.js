@@ -46,6 +46,7 @@ export async function register(username, phoneNumber, email, password) {
 
   await SecureStore.setItemAsync("auth_token", data.token);
   await SecureStore.setItemAsync("auth_user", JSON.stringify(data.user));
+  await SecureStore.setItemAsync("is_new_user", "true");
 
   return data;
 }
@@ -90,6 +91,15 @@ export async function getAuthUser() {
   }
 
   return JSON.parse(userJson);
+}
+
+export async function isNewUser() {
+  const flag = await SecureStore.getItemAsync("is_new_user");
+  return flag === "true";
+}
+
+export async function clearNewUserFlag() {
+  await SecureStore.deleteItemAsync("is_new_user");
 }
 
 export async function updateProfile(username, phoneNumber, password) {
@@ -156,4 +166,5 @@ export async function logout() {
   await SecureStore.deleteItemAsync("auth_token");
   await SecureStore.deleteItemAsync("auth_user");
   await SecureStore.deleteItemAsync("selected_vehicle");
+  await SecureStore.deleteItemAsync("is_new_user");
 }
