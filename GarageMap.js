@@ -15,8 +15,50 @@ import {
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import { getGarageDirections, getNearbyGarages } from "./src/api/garages";
 
 const screenWidth = Dimensions.get("window").width;
+
+function decodeGooglePolyline(encoded) {
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  const coordinates = [];
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte = null;
+
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+
+    const deltaLat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += deltaLat;
+
+    shift = 0;
+    result = 0;
+
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+
+    const deltaLng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += deltaLng;
+
+    coordinates.push({
+      latitude: lat / 100000,
+      longitude: lng / 100000,
+    });
+  }
+
+  return coordinates;
+}
 
 export default function GarageMap({ navigation }) {
   const mapRef = useRef(null);
@@ -32,84 +74,6 @@ export default function GarageMap({ navigation }) {
   useEffect(() => {
     getUserLocationAndGarages();
   }, []);
-
-  function getDistanceKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-  }
-
-  function getGarageName(tags) {
-    return (
-      tags?.name ||
-      tags?.["name:en"] ||
-      tags?.brand ||
-      tags?.operator ||
-      tags?.["addr:housename"] ||
-      "Unnamed Garage"
-    );
-  }
-
-  function getGarageAddress(tags) {
-    const street = tags?.["addr:street"];
-    const city = tags?.["addr:city"];
-    const full = tags?.["addr:full"];
-
-    if (full) {
-      return full;
-    }
-
-    if (street && city) {
-      return `${street}, ${city}`;
-    }
-
-    if (street) {
-      return street;
-    }
-
-    if (city) {
-      return city;
-    }
-
-    return "Nearby car service";
-  }
-
-  function getGarageImage(tags) {
-    const directImage = tags?.image || tags?.["contact:image"];
-
-    if (directImage && directImage.startsWith("http")) {
-      return directImage;
-    }
-
-    const wikimedia = tags?.wikimedia_commons;
-
-    if (wikimedia) {
-      let fileName = wikimedia;
-
-      if (fileName.startsWith("File:")) {
-        fileName = fileName.replace("File:", "");
-      }
-
-      fileName = fileName.replaceAll(" ", "_");
-
-      return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(
-        fileName
-      )}`;
-    }
-
-    return null;
-  }
 
   async function getUserLocationAndGarages() {
     try {
@@ -129,9 +93,13 @@ export default function GarageMap({ navigation }) {
         return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      let currentLocation = await Location.getLastKnownPositionAsync();
+
+      if (!currentLocation) {
+        currentLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.BestForNavigation,
+        });
+      }
 
       const userLocation = {
         latitude: currentLocation.coords.latitude,
@@ -162,79 +130,7 @@ export default function GarageMap({ navigation }) {
     try {
       setLoadingGarages(true);
 
-      const radius = 6000;
-
-      const query = `
-        [out:json][timeout:25];
-        (
-          node["shop"="car_repair"](around:${radius},${latitude},${longitude});
-          way["shop"="car_repair"](around:${radius},${latitude},${longitude});
-          relation["shop"="car_repair"](around:${radius},${latitude},${longitude});
-
-          node["craft"="mechanic"](around:${radius},${latitude},${longitude});
-          way["craft"="mechanic"](around:${radius},${latitude},${longitude});
-          relation["craft"="mechanic"](around:${radius},${latitude},${longitude});
-
-          node["amenity"="vehicle_inspection"](around:${radius},${latitude},${longitude});
-          way["amenity"="vehicle_inspection"](around:${radius},${latitude},${longitude});
-          relation["amenity"="vehicle_inspection"](around:${radius},${latitude},${longitude});
-        );
-        out center tags;
-      `;
-
-      const response = await fetch("https://overpass-api.de/api/interpreter", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `data=${encodeURIComponent(query)}`,
-      });
-
-      const data = await response.json();
-
-      const results = data.elements
-        .map((item) => {
-          const itemLatitude = item.lat || item.center?.lat;
-          const itemLongitude = item.lon || item.center?.lon;
-
-          if (!itemLatitude || !itemLongitude) {
-            return null;
-          }
-
-          const distance = getDistanceKm(
-            latitude,
-            longitude,
-            itemLatitude,
-            itemLongitude
-          );
-
-          return {
-            id: `${item.type}-${item.id}`,
-            name: getGarageName(item.tags),
-            address: getGarageAddress(item.tags),
-            latitude: itemLatitude,
-            longitude: itemLongitude,
-            distance,
-            image: getGarageImage(item.tags),
-            hasRealName: Boolean(
-              item.tags?.name ||
-                item.tags?.["name:en"] ||
-                item.tags?.brand ||
-                item.tags?.operator
-            ),
-            hasRealImage: Boolean(getGarageImage(item.tags)),
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => {
-          if (a.hasRealName && !b.hasRealName) return -1;
-          if (!a.hasRealName && b.hasRealName) return 1;
-          if (a.hasRealImage && !b.hasRealImage) return -1;
-          if (!a.hasRealImage && b.hasRealImage) return 1;
-          return a.distance - b.distance;
-        })
-        .slice(0, 5);
-
+      const results = await getNearbyGarages(latitude, longitude, 8000);
       setGarages(results);
 
       if (results.length > 0) {
@@ -247,7 +143,10 @@ export default function GarageMap({ navigation }) {
       }
     } catch (error) {
       console.log("Garage search error:", error);
-      Alert.alert("Garage search error", "Could not load nearby garages.");
+      Alert.alert(
+        "Garage search error",
+        error.message || "Could not load nearby garages."
+      );
     } finally {
       setLoadingGarages(false);
     }
@@ -261,30 +160,39 @@ export default function GarageMap({ navigation }) {
     try {
       setSelectedGarage(garage);
 
-      const url = `https://router.project-osrm.org/route/v1/driving/${location.longitude},${location.latitude};${garage.longitude},${garage.latitude}?overview=full&geometries=geojson`;
+      const data = await getGarageDirections(
+        {
+          latitude: location.latitude,
+          longitude: location.longitude,
+        },
+        {
+          latitude: garage.latitude,
+          longitude: garage.longitude,
+        }
+      );
 
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (!data.routes || data.routes.length === 0) {
+      if (!data.polyline) {
         Alert.alert("Route error", "Could not find a route to this garage.");
         return;
       }
 
-      const route = data.routes[0];
+      const coords = decodeGooglePolyline(data.polyline);
 
-      const coords = route.geometry.coordinates.map((point) => ({
-        latitude: point[1],
-        longitude: point[0],
-      }));
-
-      const distanceKm = route.distance / 1000;
-      const durationMin = Math.round(route.duration / 60);
+      if (!coords.length) {
+        Alert.alert("Route error", "Could not draw the route to this garage.");
+        return;
+      }
 
       setRouteCoords(coords);
       setRouteInfo({
-        distanceKm,
-        durationMin,
+        distanceKm: data.distanceMeters
+          ? data.distanceMeters / 1000
+          : garage.distance || 0,
+        durationMin: data.durationSeconds
+          ? Math.round(data.durationSeconds / 60)
+          : 0,
+        distanceText: data.distanceText,
+        durationText: data.durationText,
       });
 
       mapRef.current?.fitToCoordinates(coords, {
@@ -298,7 +206,7 @@ export default function GarageMap({ navigation }) {
       });
     } catch (error) {
       console.log("Route error:", error);
-      Alert.alert("Route error", "Could not load directions.");
+      Alert.alert("Route error", error.message || "Could not load directions.");
     }
   }
 
@@ -307,9 +215,12 @@ export default function GarageMap({ navigation }) {
       return;
     }
 
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${selectedGarage.latitude},${selectedGarage.longitude}&travelmode=driving`;
+    const url =
+      `https://www.google.com/maps/dir/?api=1` +
+      `&destination=${selectedGarage.latitude},${selectedGarage.longitude}` +
+      `&travelmode=driving`;
 
-    Linking.openURL(url);
+    Linking.openURL(selectedGarage.googleMapsUri || url);
   }
 
   function focusOnGarage(garage) {
@@ -386,7 +297,10 @@ export default function GarageMap({ navigation }) {
           >
             <View style={styles.garageMarker}>
               {garage.image ? (
-                <Image source={{ uri: garage.image }} style={styles.markerImage} />
+                <Image
+                  source={{ uri: garage.image }}
+                  style={styles.markerImage}
+                />
               ) : (
                 <View style={styles.noMarkerImage}>
                   <FontAwesome5 name="tools" size={20} color="#2D7EEB" />
@@ -396,7 +310,7 @@ export default function GarageMap({ navigation }) {
 
             <View style={styles.distanceBubble}>
               <Text style={styles.distanceBubbleText}>
-                {garage.distance.toFixed(1)} km
+                {Number(garage.distance || 0).toFixed(1)} km
               </Text>
             </View>
           </Marker>
@@ -451,20 +365,21 @@ export default function GarageMap({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.locationButton}
-        onPress={getUserLocationAndGarages}
-      >
-        <Ionicons name="chatbubble-ellipses" size={25} color="white" />
-      </TouchableOpacity>
+      {loadingGarages && (
+        <View style={styles.routeTopBox}>
+          <Text style={styles.routeTopDistance}>Loading garages...</Text>
+          <Text style={styles.routeVia}>Searching Google Places near you</Text>
+        </View>
+      )}
 
       {routeInfo && selectedGarage ? (
         <View style={styles.routeTopBox}>
           <Text style={styles.routeTopDistance}>
-            {routeInfo.distanceKm.toFixed(1)} km . {routeInfo.durationMin} min
+            {routeInfo.distanceText || `${routeInfo.distanceKm.toFixed(1)} km`}{" "}
+            . {routeInfo.durationText || `${routeInfo.durationMin} min`}
           </Text>
 
-          <Text style={styles.routeVia}>Via nearest route</Text>
+          <Text style={styles.routeVia}>Via Google Maps driving route</Text>
 
           <TouchableOpacity
             style={styles.routeCheck}
@@ -494,7 +409,10 @@ export default function GarageMap({ navigation }) {
                 activeOpacity={0.9}
               >
                 {garage.image ? (
-                  <Image source={{ uri: garage.image }} style={styles.garageImage} />
+                  <Image
+                    source={{ uri: garage.image }}
+                    style={styles.garageImage}
+                  />
                 ) : (
                   <View style={styles.noGarageImage}>
                     <FontAwesome5 name="tools" size={28} color="#2D7EEB" />
@@ -513,18 +431,27 @@ export default function GarageMap({ navigation }) {
 
                   <View style={styles.garageMetaRow}>
                     <Text style={styles.garageMetaText}>
-                      {Math.max(5, Math.round(garage.distance * 5))}min from your location
+                      {garage.durationText ||
+                        `${Math.max(
+                          5,
+                          Math.round((garage.distance || 1) * 5)
+                        )} min`}{" "}
+                      from your location
                     </Text>
 
                     <View style={styles.dot} />
 
                     <Text style={styles.garageMetaText}>
-                      {garage.distance.toFixed(1)}km
+                      {Number(garage.distance || 0).toFixed(1)} km
                     </Text>
                   </View>
 
                   <Text style={styles.ratingText}>
-                    Overall Rating: 4.5 ★★★★★
+                    {garage.rating
+                      ? `Overall Rating: ${garage.rating} ★ (${
+                          garage.userRatingCount || 0
+                        })`
+                      : "Rating not available"}
                   </Text>
 
                   <View style={styles.cardDivider} />
@@ -541,7 +468,9 @@ export default function GarageMap({ navigation }) {
                       style={styles.directionsButton}
                       onPress={() => drawRouteToGarage(garage)}
                     >
-                      <Text style={styles.directionsButtonText}>Directions</Text>
+                      <Text style={styles.directionsButtonText}>
+                        Directions
+                      </Text>
                       <Ionicons name="navigate" size={19} color="white" />
                     </TouchableOpacity>
                   )}
@@ -727,22 +656,6 @@ const styles = StyleSheet.create({
   zoomDivider: {
     height: 1,
     backgroundColor: "#eeeeee",
-  },
-
-  locationButton: {
-    position: "absolute",
-    right: 35,
-    bottom: 207,
-    width: 55,
-    height: 55,
-    borderRadius: 28,
-    backgroundColor: "#2D7EEB",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
   },
 
   routeTopBox: {

@@ -18,10 +18,16 @@
       }
     },
     "android": {
+      "package": "com.vagdiag.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBSQ7pP2OD897KvUR0HMVC0QLxFh7Tuo50"
+        }
+      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -41,6 +47,11 @@
           "locationWhenInUsePermission": "VAGDIAG needs your location to show nearby garage stations."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9686c074-c6f3-4bf6-adaf-668d6f3e3e06"
+      }
+    }
   }
 }

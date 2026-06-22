@@ -14,7 +14,10 @@ import {
 import { Ionicons, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 
-import { getSelectedVehicle } from "./src/api/vehicles";
+// BUG FIX 3: Also import getVehicles + saveSelectedVehicle so we can refresh
+// the vehicle from the server on every focus, instead of using a stale
+// SecureStore snapshot that may have wrong year / mileage / engine_type.
+import { getSelectedVehicle, getVehicles, saveSelectedVehicle } from "./src/api/vehicles";
 import { runScan, getLatestScan } from "./src/api/diagnostics";
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -82,26 +85,51 @@ function formatScannedAt(dateStr) {
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function Diagnose({ navigation }) {
-  const [vehicle, setVehicle]       = useState(null);
-  const [scanning, setScanning]     = useState(false);
+  const [vehicle, setVehicle]           = useState(null);
+  const [scanning, setScanning]         = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
-  const [lastScan, setLastScan]     = useState(null);
+  const [lastScan, setLastScan]         = useState(null);
   const intervalRef = useRef(null);
 
   useFocusEffect(
     useCallback(() => {
       async function load() {
         try {
-          const v = await getSelectedVehicle();
-          if (!v) {
+          // BUG FIX 3: Read the selected vehicle ID from SecureStore, then
+          // fetch fresh data from the server so year/mileage/engine_type are
+          // always up-to-date. A stale SecureStore snapshot with mileage=0
+          // or year=null was making the backend think every car is brand-new,
+          // causing it to always return "healthy".
+          const stored = await getSelectedVehicle();
+          if (!stored) {
             Alert.alert("No car connected", "Please select a car first.", [
               { text: "OK", onPress: () => navigation.navigate("MyCars") },
             ]);
             return;
           }
-          setVehicle(v);
+
+          // Refresh the vehicle from the server
           try {
-            const data = await getLatestScan(v.id);
+            const allVehicles = await getVehicles();
+            const fresh = allVehicles.find((v) => v.id === stored.id);
+            if (fresh) {
+              // Update SecureStore so next load is also correct
+              await saveSelectedVehicle(fresh);
+              setVehicle(fresh);
+            } else {
+              // Vehicle was deleted — fall back to stored snapshot
+              setVehicle(stored);
+            }
+          } catch (_) {
+            // Network error — use cached snapshot rather than blocking the UI
+            setVehicle(stored);
+          }
+
+          // Load the latest scan
+          try {
+            const data = await getLatestScan(stored.id);
+            // BUG FIX 2: getLatestScan returns { scan: {...} }
+            // Always unwrap .scan here so lastScan shape is consistent.
             setLastScan(data.scan ?? null);
           } catch (_) {
             setLastScan(null);
@@ -114,11 +142,21 @@ export default function Diagnose({ navigation }) {
     }, [])
   );
 
+  // BUG FIX 1: The original code wrapped the API call in setTimeout(async () => {...})
+  // which is fire-and-forget — React Native can't properly track async work
+  // inside a plain setTimeout. If the component re-renders or unmounts during
+  // the delay, state updates are silently lost, leaving the UI stuck on the
+  // previous (healthy) result.
+  //
+  // Fix: run the animation timer separately with setInterval as before, but
+  // fire the API call with a proper awaited Promise so the result is never
+  // dropped.
   async function handleRunDiagnosis() {
     if (!vehicle) return;
     setScanning(true);
     setScanProgress(0);
 
+    // Start the progress animation
     const step = 100 / (SCAN_DURATION / 40);
     intervalRef.current = setInterval(() => {
       setScanProgress((prev) => {
@@ -131,17 +169,32 @@ export default function Diagnose({ navigation }) {
       });
     }, 40);
 
-    setTimeout(async () => {
-      try {
-        const result = await runScan(vehicle.id);
-        setLastScan(result);
-      } catch (e) {
-        Alert.alert("Scan failed", e.message);
-      } finally {
-        setScanning(false);
-        setScanProgress(0);
-      }
-    }, SCAN_DURATION + 300);
+    // Wait for the animation to finish, THEN call the API
+    // Using a Promise wrapper so we can properly await it
+    await new Promise((resolve) => setTimeout(resolve, SCAN_DURATION + 300));
+
+    try {
+      const result = await runScan(vehicle.id);
+
+      // BUG FIX 2: runScan returns a flat object:
+      //   { scan_id, overall_status, fault_codes, mileage_at_scan, scanned_at, last_scanned_at }
+      // getLatestScan (on load) returns { scan: { scan_id, overall_status, ... } }
+      // We must normalize both to the same shape so isFaulty check always works.
+      // Normalize runScan result to match the getLatestScan .scan shape:
+      setLastScan({
+        scan_id:         result.scan_id,
+        overall_status:  result.overall_status,
+        fault_codes:     result.fault_codes ?? [],
+        mileage_at_scan: result.mileage_at_scan,
+        scanned_at:      result.scanned_at,
+      });
+    } catch (e) {
+      Alert.alert("Scan failed", e.message);
+    } finally {
+      clearInterval(intervalRef.current);
+      setScanning(false);
+      setScanProgress(0);
+    }
   }
 
   function handlePauseScan() {

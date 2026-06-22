@@ -17,28 +17,26 @@ import { Asset } from "expo-asset";
 import Logo from "./assets/logo-vagdiag.png";
 import Background from "./assets/getstarted.png";
 
-const screenWidth = Dimensions.get("window").width;
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
-const BTN_W     = screenWidth * 0.8;
-const BTN_H     = 68;
-const THUMB_W   = 62;
-const PAD       = 4;
+const BTN_W = screenWidth * 0.8;
+const BTN_H = 68;
+const THUMB_W = 62;
+const PAD = 4;
 const MAX_SLIDE = BTN_W - THUMB_W - PAD * 2;
-const TRIGGER   = MAX_SLIDE * 0.82;
+const TRIGGER = MAX_SLIDE * 0.82;
 
 export default function Getstarted({ navigation }) {
   const [imagesReady, setImagesReady] = useState(false);
-  const slideX    = useRef(new Animated.Value(0)).current;
+  const slideX = useRef(new Animated.Value(0)).current;
   const triggered = useRef(false);
 
-  // "Get started" text fades as thumb approaches the right
   const textOpacity = slideX.interpolate({
     inputRange: [0, MAX_SLIDE * 0.5, MAX_SLIDE],
     outputRange: [1, 0.4, 0],
     extrapolate: "clamp",
   });
 
-  // Right arrow fades out as thumb approaches it
   const arrowOpacity = slideX.interpolate({
     inputRange: [0, MAX_SLIDE * 0.6, MAX_SLIDE],
     outputRange: [1, 0.3, 0],
@@ -48,21 +46,25 @@ export default function Getstarted({ navigation }) {
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder:  () => true,
+      onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gs) => {
         slideX.setValue(Math.max(0, Math.min(gs.dx, MAX_SLIDE)));
       },
       onPanResponderRelease: (_, gs) => {
         if (triggered.current) return;
+
         const x = Math.max(0, Math.min(gs.dx, MAX_SLIDE));
+
         if (x >= TRIGGER) {
           triggered.current = true;
+
           Animated.timing(slideX, {
             toValue: MAX_SLIDE,
             duration: 100,
             useNativeDriver: false,
           }).start(() => {
             navigation.navigate("Signup");
+
             setTimeout(() => {
               slideX.setValue(0);
               triggered.current = false;
@@ -84,6 +86,7 @@ export default function Getstarted({ navigation }) {
       await Asset.loadAsync([Logo, Background]);
       setImagesReady(true);
     }
+
     loadImages();
   }, []);
 
@@ -93,28 +96,29 @@ export default function Getstarted({ navigation }) {
     <View style={styles.mainScreen}>
       <StatusBar translucent backgroundColor="transparent" />
 
-        <ImageBackground
-          source={Background}
-          style={styles.background}
-          resizeMode="cover"
-        >
-          <Image source={Logo} style={styles.logo} resizeMode="contain" />
+      <ImageBackground
+        source={Background}
+        style={styles.background}
+        resizeMode="cover"
+      >
+        <Image source={Logo} style={styles.logo} resizeMode="contain" />
 
-          <View style={styles.boxOne}>
-            <View style={[styles.dot, { backgroundColor: "#45ff28" }]} />
-            <Text style={styles.boxText}>Connect your car</Text>
-          </View>
+        <View style={styles.boxOne}>
+          <View style={[styles.dot, { backgroundColor: "#45ff28" }]} />
+          <Text style={styles.boxText}>Connect your car</Text>
+        </View>
 
-          <View style={styles.boxTwo}>
-            <View style={[styles.dot, { backgroundColor: "#ff3b30" }]} />
-            <Text style={styles.boxText}>Detect engine faults</Text>
-          </View>
+        <View style={styles.boxTwo}>
+          <View style={[styles.dot, { backgroundColor: "#ff3b30" }]} />
+          <Text style={styles.boxText}>Detect engine faults</Text>
+        </View>
 
-          <View style={styles.boxThree}>
-            <View style={[styles.dot, { backgroundColor: "#ffff2e" }]} />
-            <Text style={styles.boxText}>View live engine data</Text>
-          </View>
+        <View style={styles.boxThree}>
+          <View style={[styles.dot, { backgroundColor: "#ffff2e" }]} />
+          <Text style={styles.boxText}>View live engine data</Text>
+        </View>
 
+        <View style={styles.bottomContent}>
           <Text style={styles.title}>
             Understand your Audi{"\n"}
             and Volkswagen like{"\n"}
@@ -126,10 +130,7 @@ export default function Getstarted({ navigation }) {
             specifically for Audi and Volkswagen vehicles.
           </Text>
 
-          {/* ── Slider button (same look as before, white circle is draggable) ── */}
           <View style={styles.button}>
-
-            {/* Draggable white circle — the thumb */}
             <Animated.View
               style={[styles.leftCircle, { transform: [{ translateX: slideX }] }]}
               {...panResponder.panHandlers}
@@ -137,22 +138,20 @@ export default function Getstarted({ navigation }) {
               <Ionicons name="chevron-forward" size={32} color="#d8d8d8" />
             </Animated.View>
 
-            {/* Centre label */}
             <Animated.Text style={[styles.buttonText, { opacity: textOpacity }]}>
               Slide to get started
             </Animated.Text>
 
-            {/* Right arrow */}
             <Animated.View style={[styles.rightArrow, { opacity: arrowOpacity }]}>
               <Ionicons name="chevron-forward" size={30} color="white" />
             </Animated.View>
-
           </View>
 
           <Text style={styles.bottomText}>
             By continuing you agree to our Terms & Privacy Policy
           </Text>
-        </ImageBackground>
+        </View>
+      </ImageBackground>
     </View>
   );
 }
@@ -166,6 +165,7 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: screenWidth,
+    height: screenHeight,
   },
 
   logo: {
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
 
   boxOne: {
     position: "absolute",
-    top: 120,
+    top: screenHeight * 0.14,
     left: 28,
     width: 205,
     height: 42,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
 
   boxTwo: {
     position: "absolute",
-    top: 202,
+    top: screenHeight * 0.24,
     right: 55,
     width: 200,
     height: 42,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
 
   boxThree: {
     position: "absolute",
-    top: 282,
+    top: screenHeight * 0.34,
     left: 28,
     width: 205,
     height: 42,
@@ -226,31 +226,34 @@ const styles = StyleSheet.create({
     color: "#6f7782",
   },
 
-  title: {
+  bottomContent: {
     position: "absolute",
-    top: 585,
+    left: 0,
+    right: 0,
+    bottom: 22,
+    alignItems: "center",
+  },
+
+  title: {
     width: "100%",
     fontSize: 30,
     fontWeight: "800",
     color: "black",
     textAlign: "center",
     lineHeight: 42,
+    marginBottom: 28,
   },
 
   description: {
-    position: "absolute",
-    top: 730,
     width: "100%",
     fontSize: 13,
     color: "#7d7d7d",
     textAlign: "center",
     lineHeight: 18,
+    marginBottom: 32,
   },
 
   button: {
-    position: "absolute",
-    top: 785,
-    left: screenWidth * 0.1,
     width: BTN_W,
     height: BTN_H,
     borderRadius: 36,
@@ -259,6 +262,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    marginBottom: 13,
   },
 
   leftCircle: {
@@ -285,8 +289,6 @@ const styles = StyleSheet.create({
   },
 
   bottomText: {
-    position: "absolute",
-    top: 870,
     width: "100%",
     fontSize: 11,
     color: "#777777",
