@@ -7,7 +7,6 @@ import {
   Alert,
   TouchableOpacity,
   Dimensions,
-  ScrollView,
   Image,
   Linking,
 } from "react-native";
@@ -226,11 +225,15 @@ export default function GarageMap({ navigation }) {
   function focusOnGarage(garage) {
     setSelectedGarage(garage);
 
+    // Reset old route when user selects another garage circle
+    setRouteCoords([]);
+    setRouteInfo(null);
+
     const region = {
-      latitude: garage.latitude,
-      longitude: garage.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
+      latitude: Number(garage.latitude),
+      longitude: Number(garage.longitude),
+      latitudeDelta: 0.008,
+      longitudeDelta: 0.008,
     };
 
     mapRef.current?.animateToRegion(region, 800);
@@ -290,29 +293,57 @@ export default function GarageMap({ navigation }) {
           <Marker
             key={garage.id}
             coordinate={{
-              latitude: garage.latitude,
-              longitude: garage.longitude,
+              latitude: Number(garage.latitude),
+              longitude: Number(garage.longitude),
             }}
-            onPress={() => focusOnGarage(garage)}
+            tracksViewChanges={true}
+            onPress={(event) => {
+              event.stopPropagation();
+              focusOnGarage(garage);
+            }}
           >
-            <View style={styles.garageMarker}>
-              {garage.image ? (
-                <Image
-                  source={{ uri: garage.image }}
-                  style={styles.markerImage}
-                />
-              ) : (
-                <View style={styles.noMarkerImage}>
-                  <FontAwesome5 name="tools" size={20} color="#2D7EEB" />
-                </View>
-              )}
-            </View>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => focusOnGarage(garage)}
+              style={styles.markerContainer}
+            >
+              <View
+                style={[
+                  styles.garageMarker,
+                  selectedGarage?.id === garage.id &&
+                    styles.selectedGarageMarker,
+                ]}
+              >
+                {garage.image ? (
+                  <Image
+                    source={{ uri: garage.image }}
+                    style={styles.markerImage}
+                  />
+                ) : (
+                  <View style={styles.noMarkerImage}>
+                    <FontAwesome5 name="tools" size={20} color="#2D7EEB" />
+                  </View>
+                )}
+              </View>
 
-            <View style={styles.distanceBubble}>
-              <Text style={styles.distanceBubbleText}>
-                {Number(garage.distance || 0).toFixed(1)} km
-              </Text>
-            </View>
+              <View
+                style={[
+                  styles.distanceBubble,
+                  selectedGarage?.id === garage.id &&
+                    styles.selectedDistanceBubble,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.distanceBubbleText,
+                    selectedGarage?.id === garage.id &&
+                      styles.selectedDistanceBubbleText,
+                  ]}
+                >
+                  {Number(garage.distance || 0).toFixed(1)} km
+                </Text>
+              </View>
+            </TouchableOpacity>
           </Marker>
         ))}
 
@@ -397,87 +428,77 @@ export default function GarageMap({ navigation }) {
         <View style={styles.garagePanel}>
           <View style={styles.panelHandle} />
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {garages.map((garage) => (
-              <TouchableOpacity
-                key={garage.id}
-                style={[
-                  styles.garageCard,
-                  selectedGarage.id === garage.id && styles.activeGarageCard,
-                ]}
-                onPress={() => focusOnGarage(garage)}
-                activeOpacity={0.9}
-              >
-                {garage.image ? (
-                  <Image
-                    source={{ uri: garage.image }}
-                    style={styles.garageImage}
-                  />
-                ) : (
-                  <View style={styles.noGarageImage}>
-                    <FontAwesome5 name="tools" size={28} color="#2D7EEB" />
-                    <Text style={styles.noPhotoText}>No photo</Text>
-                  </View>
-                )}
+          <TouchableOpacity
+            style={styles.garageCard}
+            activeOpacity={0.95}
+            onPress={() => focusOnGarage(selectedGarage)}
+          >
+            {selectedGarage.image ? (
+              <Image
+                source={{ uri: selectedGarage.image }}
+                style={styles.garageImage}
+              />
+            ) : (
+              <View style={styles.noGarageImage}>
+                <FontAwesome5 name="tools" size={28} color="#2D7EEB" />
+                <Text style={styles.noPhotoText}>No photo</Text>
+              </View>
+            )}
 
-                <View style={styles.garageInfo}>
-                  <Text style={styles.garageName} numberOfLines={1}>
-                    {garage.name}
-                  </Text>
+            <View style={styles.garageInfo}>
+              <Text style={styles.garageName} numberOfLines={1}>
+                {selectedGarage.name}
+              </Text>
 
-                  <Text style={styles.garageAddress} numberOfLines={1}>
-                    {garage.address}
-                  </Text>
+              <Text style={styles.garageAddress} numberOfLines={1}>
+                {selectedGarage.address}
+              </Text>
 
-                  <View style={styles.garageMetaRow}>
-                    <Text style={styles.garageMetaText}>
-                      {garage.durationText ||
-                        `${Math.max(
-                          5,
-                          Math.round((garage.distance || 1) * 5)
-                        )} min`}{" "}
-                      from your location
-                    </Text>
+              <View style={styles.garageMetaRow}>
+                <Text style={styles.garageMetaText}>
+                  {selectedGarage.durationText ||
+                    `${Math.max(
+                      5,
+                      Math.round((selectedGarage.distance || 1) * 5)
+                    )} min`}{" "}
+                  from your location
+                </Text>
 
-                    <View style={styles.dot} />
+                <View style={styles.dot} />
 
-                    <Text style={styles.garageMetaText}>
-                      {Number(garage.distance || 0).toFixed(1)} km
-                    </Text>
-                  </View>
+                <Text style={styles.garageMetaText}>
+                  {Number(selectedGarage.distance || 0).toFixed(1)} km
+                </Text>
+              </View>
 
-                  <Text style={styles.ratingText}>
-                    {garage.rating
-                      ? `Overall Rating: ${garage.rating} ★ (${
-                          garage.userRatingCount || 0
-                        })`
-                      : "Rating not available"}
-                  </Text>
+              <Text style={styles.ratingText}>
+                {selectedGarage.rating
+                  ? `Overall Rating: ${selectedGarage.rating} ★ (${
+                      selectedGarage.userRatingCount || 0
+                    })`
+                  : "Rating not available"}
+              </Text>
 
-                  <View style={styles.cardDivider} />
+              <View style={styles.cardDivider} />
 
-                  {routeInfo && selectedGarage.id === garage.id ? (
-                    <TouchableOpacity
-                      style={styles.startButton}
-                      onPress={openGoogleMapsNavigation}
-                    >
-                      <Text style={styles.startButtonText}>Start</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.directionsButton}
-                      onPress={() => drawRouteToGarage(garage)}
-                    >
-                      <Text style={styles.directionsButtonText}>
-                        Directions
-                      </Text>
-                      <Ionicons name="navigate" size={19} color="white" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+              {routeInfo ? (
+                <TouchableOpacity
+                  style={styles.startButton}
+                  onPress={openGoogleMapsNavigation}
+                >
+                  <Text style={styles.startButtonText}>Start</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.directionsButton}
+                  onPress={() => drawRouteToGarage(selectedGarage)}
+                >
+                  <Text style={styles.directionsButtonText}>Directions</Text>
+                  <Ionicons name="navigate" size={19} color="white" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -555,6 +576,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  markerContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   garageMarker: {
     width: 63,
     height: 63,
@@ -568,6 +594,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
+  },
+
+  selectedGarageMarker: {
+    borderColor: "#2D7EEB",
+    borderWidth: 4,
+    transform: [{ scale: 1.12 }],
   },
 
   markerImage: {
@@ -598,10 +630,18 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
+  selectedDistanceBubble: {
+    backgroundColor: "#2D7EEB",
+  },
+
   distanceBubbleText: {
     fontSize: 11,
     color: "#4d4d4d",
-    fontWeight: "600",
+    fontWeight: "700",
+  },
+
+  selectedDistanceBubbleText: {
+    color: "white",
   },
 
   backButton: {
@@ -708,6 +748,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 178,
+    alignItems: "center",
   },
 
   panelHandle: {
@@ -725,19 +766,12 @@ const styles = StyleSheet.create({
     height: 170,
     backgroundColor: "white",
     borderRadius: 19,
-    marginLeft: 33,
-    marginRight: 8,
     padding: 15,
     flexDirection: "row",
     shadowColor: "#000",
     shadowOpacity: 0.14,
     shadowRadius: 9,
     elevation: 7,
-  },
-
-  activeGarageCard: {
-    borderWidth: 1,
-    borderColor: "#e9e9e9",
   },
 
   garageImage: {
