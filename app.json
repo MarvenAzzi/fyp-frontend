@@ -21,7 +21,9 @@
       "package": "com.vagdiag.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -46,11 +48,12 @@
         {
           "locationWhenInUsePermission": "VAGDIAG needs your location to show nearby garage stations."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "eas": {
-        "projectId": "9686c074-c6f3-4bf6-adaf-668d6f3e3e06"
+        "projectId": "96b69177-0f17-47be-bb57-5444b2cc0901"
       }
     }
   }
